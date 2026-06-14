@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""grader_audit.py — Harness to machine-verify the grader quality of all 193 questions
+"""grader_audit.py — Harness to machine-verify the grader quality of every grader question
 
 [Usage]
   1. Revert the VM to the "clean-base" snapshot (rhcsa-revert.sh or manually)

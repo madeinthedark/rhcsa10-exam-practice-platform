@@ -9,6 +9,7 @@
   "_serverb_ssh_comment": "The command launched on ServerA when grading ServerB in the supplementary exam set. ${SSH_B} in grader.checks cmd entries is expanded to this value. The default is ssh root@server2 (this assumes that ServerA's /etc/hosts can resolve server2).",
   "serverb_ssh": "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@server2",
   "_chat_comment": "AI question chat (optional). Setting anthropic_api_key enables the AI tutor chat on the right side of the question screen. If left as an empty string, /chat returns 503 and the UI does not display the chat.",
+  "_chat_privacy_warning": "PRIVACY: when enabled, the chat sends the currently open question's text and (outside hint mode) its model answer to Anthropic's API. With only the bundled sample tasks this is harmless. If you wire up the excluded private question bank (derived from third-party paid material), enabling this transmits that content to a third party — leave anthropic_api_key empty if you do not want that.",
   "anthropic_api_key": "",
   "anthropic_model": "claude-haiku-4-5",
   "_future": "vmx_path / snapshot_name are for the post-MVP /reset and /reboot endpoints (currently unused).",

@@ -19,14 +19,15 @@
       var perCheck = [];
       var earned = 0, max = 0;
       checks.forEach(function (c) {
-        if (c.scope !== phase) return;          // only aggregate checks for the requested phase
+        var scope = c.scope || "live";          // default to "live" to match the bridge (c.get("scope","live"))
+        if (scope !== phase) return;            // only aggregate checks for the requested phase
         var res = byId[c.id];
         var passed = !!res && res.exitCode === 0;
         var sc = (typeof c.score === "number") ? c.score : 0;
         max += sc;
         if (passed) earned += sc;
         perCheck.push({
-          id: c.id, label: c.label || c.id, scope: c.scope,
+          id: c.id, label: c.label || c.id, scope: scope,
           passed: passed, score: sc, earned: passed ? sc : 0,
           exitCode: res ? res.exitCode : null
         });

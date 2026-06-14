@@ -119,4 +119,12 @@ You have succeeded when the indicator in the top-right corner turns to **"● VM
   definitions on the bridge side (the `grader` field in `manual_overrides.json`). Arbitrary
   commands cannot be run from the browser
 - Grading commands are, as a rule, **read-only** (verification commands that do not change state)
-- A random token generated at startup and Origin validation prevent calls from other sites
+- A random token generated at startup and Origin validation prevent calls from other sites. The
+  token is returned by `/status` **only to a request carrying an allowed `Origin`** (the real app
+  page); an anonymous local caller (e.g. `curl` with no `Origin`) gets VM-reachability status but
+  not the token
+- **Optional AI chat transmits data to an external API.** Setting `anthropic_api_key` in the config
+  enables the AI tutor, which sends the open question's text and (outside hint mode) its model
+  answer to Anthropic's API. This is harmless with the bundled sample tasks, but if you wire up the
+  excluded private question bank (third-party paid material), enabling the chat sends that content
+  to a third party. Leave `anthropic_api_key` empty to keep the chat off

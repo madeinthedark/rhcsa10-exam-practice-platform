@@ -1,6 +1,6 @@
 # RHCSA10 VM Automated Grading Specification
 
-_Last updated: 2026-05-16 / **Introduced the grading-assist type (rhcsa_done) for all 115 Class B questions, promoting all 193 questions to Class A**_
+_Last updated: 2026-05-16 / **Introduced the grading-assist type (rhcsa_done), promoting the remaining assisted-grading questions to high-accuracy grading**_
 
 ## Table of Contents
 
@@ -26,7 +26,7 @@ _Last updated: 2026-05-16 / **Introduced the grading-assist type (rhcsa_done) fo
 
 ## 0. Changes in This Version (2026-05-16)
 
-The 115 questions previously classified as Class B (medium accuracy, 70-85%) have all been promoted to Class A (high accuracy, 90-97%) through the introduction of the **grading-assist command `rhcsa_done`**.
+The questions that previously relied on assisted grading (medium accuracy) have been promoted to high-accuracy grading through the introduction of the **grading-assist command `rhcsa_done`**.
 
 How it works:
 
@@ -62,9 +62,9 @@ A mechanism in the RHCSA10 learning app to **objectively determine** "whether th
 
 | Range | Content |
 |---|---|
-| Supported question count | **All 193 questions** (180 official + 13 supplementary exam set) |
-| Categories | 100% coverage of all 10 official categories |
-| Grading unit | 2 to 12 checks per question (total maxScore = 1,883 points) |
+| Supported questions | The full private question bank (excluded from this public repo); the published build ships original sample tasks |
+| Categories | Covers all 10 official RHCSA objective categories |
+| Grading unit | 2 to 12 checks per question |
 | Grading method | SSH command execution + exit code judgment |
 | Grading mode | Single-question grading / mock-exam VM batch grading |
 
@@ -148,7 +148,7 @@ Response:
 - `vm`: `"reachable"` or `"unreachable"`
 - `hostname`: the result of running the `hostname` command over the SSH connection
 - `error`: the SSH error message (empty string if none)
-- `token`: the browser stores this and attaches it to the `X-RHCSA-Bridge-Token` header on subsequent `/grade` and `/chat` calls (CORS allows only legitimate Origins to receive it)
+- `token`: the browser stores this and attaches it to the `X-RHCSA-Bridge-Token` header on subsequent `/grade` and `/chat` calls. The bridge includes it in the `/status` response only for a request carrying an allowed `Origin` (server-side gate; CORS is a second layer). Anonymous local callers receive reachability only.
 - `chat`: whether anthropic_api_key is configured
 
 > The browser polls `/status` once every 20 seconds. From the response, the browser computes `Bridge.bridgeUp` (whether HTTP 200 was returned) and `Bridge.connected` (the value of `d.ok`) (bridge.js).
@@ -182,7 +182,7 @@ Response:
 ```
 
 - The request **does not contain any commands** (vmbridge resolves the grader.checks in `manual_overrides.json` from the questionId alone)
-- `phase` is `"live"` or `"reboot"`. Currently all 193 questions are `"live"` (§6 scope policy)
+- `phase` is `"live"` or `"reboot"`. Currently all grader questions are `"live"` (§6 scope policy)
 - A check passes when the response's `results[].exitCode` is 0
 - On the browser side, `Grader.score(q, response)` converts `results` into a `perCheck` array (`{id, label, scope, passed, score, earned, exitCode}`) (`app/js/grader.js`)
 
@@ -306,7 +306,7 @@ Since all checks are unified on `exit code 0`, they are built with `grep -q` / `
 
 ### Current Implementation
 
-**All 193 questions × all checks are unified on `scope: "live"`** (as of 2026-05-16).
+**All grader questions × all checks are unified on `scope: "live"`** (as of 2026-05-16).
 
 > History: only `t1q6.mounted_persist` from the initial implementation remained as `scope: "reboot"`, but following a review finding (P0-3) it was replaced with the live check `findmnt -rn /mylv && grep -qE '[[:space:]]/mylv[[:space:]]' /etc/fstab`. As a result, the "unified on live" claim now fully matches the actual data.
 
@@ -475,7 +475,7 @@ state = {
 
 ### UI Reflection
 
-- Home: "VM graded X / 193" is updated by `vmGradedCount()`
+- Home: "VM graded X / N" is updated by `vmGradedCount()`
 - Review screen: each card under "Today's tasks" counts the corresponding selfGrade
 - Question list: the × / △ / ○ grade symbols are displayed directly
 
@@ -490,7 +490,7 @@ state = {
 | Bind | 127.0.0.1 only (not exposed to the LAN) |
 | Authentication | A random token generated at startup (a URL-safe string derived from `secrets.token_urlsafe(24)`) |
 | Origin validation | A whitelist such as `http://localhost:8765` (`vmbridge.py:_origin_allowed`) |
-| token distribution | Returned only to legitimate Origins via the `token` field of the `/status` response (CORS) |
+| token distribution | Included in the `/status` response only for a request carrying an allowed `Origin` (server-side gate; CORS is a second layer). Anonymous local callers (e.g. `curl` with no `Origin`) get reachability only |
 | Request size | `/grade` 4096 bytes, `/chat` 32 KB |
 | Input validation | Checks whether `questionId` is registered in manual_overrides |
 | Trusted Command Pattern | **The browser sends only the questionId; commands are referenced solely from the server-side manual_overrides.json** |
@@ -606,70 +606,19 @@ One check per question is forbidden. Split into at least 3 checks to make "how f
 
 ## 13. Current Implementation Scope and Accuracy
 
-### Numerical Summary
+### Public build vs. full question bank
 
-| Metric | Value |
-|---|---|
-| Total questions | 193 (180 official + 13 supplementary) |
-| autoGradeReady | **193 / 193** (100%) |
-| **Class A (high accuracy)** | **193 / 193** (100%) ★ |
-| Class B (assisted grading) | 0 |
-| Total checks | **652** |
-| Average checks / question | 3.4 |
-| Total maxScore sum | **2,017 points** |
-| Questions using the grading-assist type (rhcsa_done) | **115 questions** (formerly Class B) |
+This repository is published **code-only**: it ships a small set of **original sample tasks** so the
+grading pipeline stays explorable. The full question bank — its exact question counts, per-category
+breakdown, per-question accuracy classes, and the `graderQuality` audit list — is derived from
+third-party paid materials and is **part of the excluded private data**, so those figures are not
+reproduced here.
 
-### By Category
-
-| Category | Questions | Checks (approx.) |
-|---|---|---|
-| operate-systems | 38 | ~95 |
-| essential-tools | 22 | ~65 |
-| users-groups | 22 | ~75 |
-| local-storage | 20 | ~75 |
-| deploy-maintain | 18 | ~60 |
-| manage-software | 17 | ~50 |
-| networking | 17 | ~55 |
-| security | 16 | ~50 |
-| file-systems | 13 | ~40 |
-| shell-scripts | 10 | ~30 |
-
-### Accuracy Class Classification
-
-**The supporting data is already output as a per-qid list in [`VM_GRADING_AUDIT.md`](VM_GRADING_AUDIT.md)**.
-Each question in `manual_overrides.json` has a `"graderQuality": "A" | "B"` field, which is propagated to each question in `questions.js` through the merge in `build_data.py`. During review, this field allows mechanical verification.
-
-#### Class A (high accuracy, 85-95%) — 78 questions
-
-The group of questions written in full compliance with the 5 rules up to the previous round. Reliable at a level recommended for 3-case manual verification.
-
-- Existing 18 (t1q6/t1q9/t1q13/t1q19/t1q26 + t7q1 to t7q13)
-- 30 questions in batch 1 (10 categories × 3 questions, evenly distributed)
-- 30 questions in batch 2
-
-Representative examples: users, SGID, SELinux mode, firewall, hostname, LVM, systemd timer
-
-#### Class B (medium accuracy, 70-85%) — 115 questions
-
-The group of questions written in this round's batch 3 prioritizing coverage. Checks are simplified to 2-3 each, with a possibility of misjudgment.
-
-Question types prone to lower accuracy:
-
-| Type | Examples | Reason |
-|---|---|---|
-| root password reset | t1q1, t2q1, t3q1, t4q1, t5q1, t6q1 | Can only be confirmed via the modification time of `/etc/shadow` |
-| process management | t1q22, t2q30, t3q25, t4q23 | No trace remains after a kill |
-| shell scripts | t3q26, t4q22, t4q23 | Picks up the script name/location loosely, so a false pass is possible |
-| legacy (ACL/VDO/Thin) | t1q20, t1q23, t3q16, t3q27, t4q11, t6q9, t6q11, t6q17, t6q26 | Mostly pattern matching, low accuracy |
-| file-search type | t4q27, t4q28, t4q30, t6q14, t6q20 | Based on guessing the output destination path |
-
-#### External Explanation (recommended)
-
-When citing these numbers outside this spec:
-
-> "VM grading support for **193 questions** (of which high accuracy **78 questions** / assisted grading **115 questions**)"
-
-Presenting them in two tiers conveys the level of reliability. Saying only "supports 193 questions" hides the accuracy gap and invites misunderstanding.
+Each grader question carries a `"graderQuality": "A" | "B"` field in `manual_overrides.json`, which
+`build_data.py` propagates into `questions.js`; this lets a reviewer mechanically check the accuracy
+class of any question that is present. Accuracy is reported in two tiers — high-accuracy checks and
+assisted-grading (`rhcsa_done`) checks — so the reliability of each question is explicit rather than
+implied by a single coverage number.
 
 ---
 
@@ -689,7 +638,7 @@ Presenting them in two tiers conveys the level of reliability. Saying only "supp
 |---|---|---|
 | Unified exit code | Script generation is simple, easy to allow alternative solutions | Cannot judge "fine differences in expected values" |
 | Unified live | Completes in a single SSH, evaluated in mock exams | Does not guarantee true persistence (post-reboot behavior) |
-| Support for all 193 questions | The learning flow completes for every question | The 115 Class B questions have low accuracy and may misjudge |
+| Support for the full question bank | The learning flow completes for every question | Assisted-grading questions have lower accuracy and may misjudge |
 | Bridge accepts qid only | Prevents arbitrary command execution via the XSS path | The grader must be consolidated server-side |
 
 ---
@@ -698,7 +647,7 @@ Presenting them in two tiers conveys the level of reliability. Saying only "supp
 
 ### Short-term (1-2 days)
 
-- Run the 3-case verification on the 115 Class B questions in sequence, fix misjudgments, and promote to Class A
+- Run the 3-case verification on the assisted-grading questions in sequence, fix misjudgments, and promote to high-accuracy grading
 - root password reset type: add a "new password usage count" check via `passwd -S root` + `chage -l root` (improves accuracy)
 - TuneD: add a check for the specific profile name (improves accuracy)
 
@@ -756,8 +705,8 @@ Presenting them in two tiers conveys the level of reliability. Saying only "supp
 ```bash
 python3 app/tools/build_data.py
 # Expected:
-#   Total questions      : 193
-#   Auto-grading support : 193
+#   Total questions      : <N>
+#   Auto-grading support : <N>
 #   Zero ERRORs
 ```
 
@@ -789,7 +738,7 @@ python3 app/tools/build_data.py
 
 | File | Description |
 |---|---|
-| `app/js/data/questions.js` | Generated by build_data.py. The full data for all 193 questions |
+| `app/js/data/questions.js` | Generated by build_data.py. The full data for every question in the bank |
 | `app/js/data/exams.js` | Data for the 4 mock exams |
 | `app/js/data/guides.js` | Study guides (with links to related questions) |
 
@@ -799,15 +748,11 @@ python3 app/tools/build_data.py
 |---|---|
 | `README.md` | Overall project, quick start, VM snapshot operations |
 | `app/SETUP-vmbridge.md` | Detailed vmbridge setup |
-| `UI_STUDY_GUIDE.md` | UI improvement guide (a separate axis from this spec) |
 | **`VM_GRADING_SPEC.md`** | **This specification** |
-| **`VM_GRADING_AUDIT.md`** | **Accuracy-class audit list for all 193 questions (basis for `graderQuality`)** — regenerate with `python3 /tmp/claude/gen_audit.py` |
 
-### Plan Files
-
-| File | Description |
-|---|---|
-| `~/.claude/plans/rhcsa10-web-fancy-ullman.md` | The most recent implementation plan (currently the hand-written plan for the 30 VM grading questions) |
+> The per-question accuracy-class audit list (the basis for `graderQuality`) is generated alongside
+> the full question bank and is part of the excluded private data; it is not included in this
+> public, code-only repository.
 
 ---
 
@@ -891,21 +836,16 @@ test "$(atq | wc -l)" -ge 1
 
 Points to check when reviewing the spec:
 
-- [ ] Does `maxScore == sum(checks.score)` hold for all 193 grader questions?
+- [ ] Does `maxScore == sum(checks.score)` hold for every grader question?
 - [ ] **Are all checks `scope: "live"` (intentionally unified on live this round, keeping reboot at 0)?**
-- [ ] Is the `graderQuality` field assigned to all 193 questions, with A=78 / B=115?
+- [ ] Is the `graderQuality` field assigned to every grader question?
 - [ ] **Is the API request key named `questionId` (not `qid`), and the response key `results` (not `perCheck`)?**
-- [ ] Is `/status` token-free while `/grade` and `/chat` require a token?
+- [ ] Does `/status` require no token to call, while `/grade` and `/chat` require one — and is the token returned by `/status` only to an allowed `Origin`?
 - [ ] Are the HTTP error codes as implemented (403/404/415/400/502/503)?
-- [ ] Is the accuracy of the 6 root password reset questions within acceptable range (`VM_GRADING_AUDIT.md` Class B section)?
-- [ ] Is the grader accuracy of the 10 legacy questions within acceptable range (same as above)?
+- [ ] Are the low-accuracy question types (e.g. root password reset, legacy ACL/VDO/Thin) within their acceptable accuracy range?
 - [ ] Do checks that use ServerB use the `${SSH_B}` macro (not writing `ssh root@server2` directly)?
 - [ ] Is the Trusted Command Pattern upheld (vmbridge never accepts a cmd from the browser)?
 - [ ] Are the existing overrides in manual_overrides.json (server, pitfalls, prompt, verify) left intact?
-- [ ] Does `python3 app/tools/build_data.py` output the following:
-  - `Total questions      : 193`
-  - `Auto-grading support : 193`
-  - `└─ Class A accuracy : 78 questions`
-  - `└─ Class B accuracy : 115 questions`
+- [ ] Does `python3 app/tools/build_data.py` report the question/auto-grading totals and per-accuracy-class counts without errors?
 - [ ] Is the selfGrade integration "respect the manual grade + vm-auto can be updated"?
 - [ ] Does the mock-exam VM batch grading include an 80ms-interval sleep (to avoid VM congestion)?

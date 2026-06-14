@@ -427,12 +427,18 @@ class BridgeHandler(BaseHTTPRequestHandler):
             payload = {
                 "ok": bool(st.get("ok")),
                 "vm": "reachable" if st.get("ok") else "unreachable",
-                "hostname": st.get("hostname", ""),
-                "error": st.get("error", ""),
-                "token": TOKEN,             # only a valid Origin can read the response (CORS)
                 "chat": bool(CONFIG and CONFIG.get("anthropic_api_key")),
                 "chatModel": (CONFIG.get("anthropic_model") if CONFIG else ""),
             }
+            # The bridge token (which authorizes /grade command execution on the VM) and the
+            # VM hostname are returned ONLY to a request carrying a valid allowed Origin, i.e.
+            # the real app page. Anonymous local callers (curl, or any process that sends no
+            # Origin) get reachability only — CORS does not stop them reaching /status, so we
+            # must not hand them the token here.
+            if origin:
+                payload["token"] = TOKEN
+                payload["hostname"] = st.get("hostname", "")
+                payload["error"] = st.get("error", "")
             self._send_json(200, payload, origin)
         else:
             self._send_json(404, {"error": "not found"}, origin)
@@ -460,7 +466,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
         if ctype != "application/json":
             self._send_json(415, {"error": "JSON only"}, origin)
             return None
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            self._send_json(400, {"error": "bad request body"}, origin)
+            return None
         if length <= 0 or length > max_size:
             self._send_json(400, {"error": "bad request body"}, origin)
             return None

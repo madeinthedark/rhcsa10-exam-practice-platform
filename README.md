@@ -65,3 +65,5 @@ docs/architecture/VM_GRADING_SPEC.md
 ## License
 
 Code in this repository is released under the [MIT License](LICENSE). It is independent study software and is not affiliated with or endorsed by Red Hat.
+
+The bundled fonts (Source Code Pro, Cantarell) are under the SIL Open Font License 1.1 — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
