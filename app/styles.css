@@ -1,12 +1,12 @@
-/* RHCSA 10 ハンズオン試験練習 — ダーク改善UI
-   方針: 黒を和らげる / 本文ゴシック・コード等幅 / すっきり整理（余白と行間）
-   英字フォント: RHEL 10 (GNOME 47) の実機既定に合わせる
-     - UI 欧文 = Cantarell（GNOME 47 既定インターフェイスフォント）
-     - コマンド/コード = Source Code Pro（GNOME 47 既定の等幅フォント）
-   いずれも Latin サブセットを app/fonts/ に同梱（完全オフライン）。
-   日本語はグリフを持たないため自動的に後段のゴシック体へフォールバックする。 */
+/* RHCSA 10 hands-on exam practice — improved dark UI
+   Direction: soften the black / sans-serif body, monospace code / clean organization (spacing and line height)
+   Latin font: matches the on-device defaults of RHEL 10 (GNOME 47)
+     - UI Latin = Cantarell (GNOME 47 default interface font)
+     - commands/code = Source Code Pro (GNOME 47 default monospace font)
+   Both ship a Latin subset bundled in app/fonts/ (fully offline).
+   Japanese has no glyphs here, so it automatically falls back to the later sans-serif faces. */
 
-/* ---- 同梱フォント (RHEL 10 実機既定) ---- */
+/* ---- Bundled fonts (RHEL 10 on-device defaults) ---- */
 @font-face {
   font-family: "Cantarell";
   src: url("fonts/cantarell-400.woff2") format("woff2");
@@ -29,36 +29,36 @@
 }
 
 :root {
-  /* Quiet workstation: 暖かい暗色 + ゴールド・アクセント。
-     新パレット → 旧変数名にエイリアスして全画面に波及させる。 */
-  --accent: #d8b86a;          /* 主アクセント: ゴールド */
-  --accent-soft: #3a3324;     /* アクセントの薄背景 */
-  --ok:   #8fbc8f;            /* 正解 ○ */
-  --warn: #d0a85c;            /* 部分点 △ */
-  --bad:  #c56b68;            /* 不正解 × / エラー */
+  /* Quiet workstation: warm dark colors + gold accent.
+     New palette → aliased onto the old variable names so it ripples across every screen. */
+  --accent: #d8b86a;          /* primary accent: gold */
+  --accent-soft: #3a3324;     /* faint accent background */
+  --ok:   #8fbc8f;            /* correct ○ */
+  --warn: #d0a85c;            /* partial credit △ */
+  --bad:  #c56b68;            /* incorrect × / error */
 
-  /* 背景: ややウォーム寄りのダーク */
+  /* Background: a slightly warm-leaning dark */
   --bg: #111214;
   --bg-panel: #1b1d20;
   --bg-panel2: #26292e;
-  --bg-code: #0b0c0e;        /* コードブロックだけ最暗 */
+  --bg-code: #0b0c0e;        /* only code blocks are the darkest */
   --border: #3a3f46;
   --border-soft: #2a2e34;
 
-  /* 文字: 暖かみのあるオフホワイト */
+  /* Text: warm off-white */
   --fg: #ece7da;
   --fg-mid: #b9b0a1;
   --fg-dim: #80786d;
 
-  /* 既存変数を新パレットに再マッピング — 既存セレクタの色も自動で更新される */
-  --green: var(--ok);             /* qno / active nav 等 → ok 寄り */
-  --green-bright: var(--accent);  /* 合格○・ag-total → accent ゴールド */
-  --cyan: var(--accent);          /* 主UIアクセント → accent ゴールド */
-  --amber: var(--warn);           /* 警告・部分点△ → warn */
-  --red: var(--bad);              /* 不合格×・エラー → bad */
-  --blue: var(--fg-mid);          /* badge.cat → ミッド */
+  /* Remap the existing variables onto the new palette — the colors of existing selectors update automatically too */
+  --green: var(--ok);             /* qno / active nav etc. → leans toward ok */
+  --green-bright: var(--accent);  /* pass ○ / ag-total → accent gold */
+  --cyan: var(--accent);          /* primary UI accent → accent gold */
+  --amber: var(--warn);           /* warning / partial credit △ → warn */
+  --red: var(--bad);              /* fail × / error → bad */
+  --blue: var(--fg-mid);          /* badge.cat → mid */
 
-  /* フォント: 欧文は RHEL 10 実機既定、日本語はゴシック体にフォールバック */
+  /* Fonts: Latin uses the RHEL 10 on-device defaults, Japanese falls back to a sans-serif face */
   --sans: "Cantarell", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
           "Yu Gothic", "YuGothic", "Noto Sans JP", "Meiryo", system-ui, sans-serif;
   --mono: "Source Code Pro", "SFMono-Regular", "Menlo", "Consolas",
@@ -85,7 +85,7 @@ a:hover { text-decoration: underline; }
 
 .hidden { display: none !important; }
 
-/* ---- トップバー ---- */
+/* ---- Top bar ---- */
 #topbar {
   display: flex; align-items: center; gap: 20px;
   padding: 12px 22px;
@@ -122,18 +122,18 @@ a:hover { text-decoration: underline; }
   border-color: var(--red); color: var(--red); background: var(--bg-panel);
 }
 
-/* VM ブリッジ接続状態インジケータ */
+/* VM bridge connection status indicator */
 .bridge-status {
   margin-left: auto; font-size: 12px; font-weight: 700;
   padding: 4px 11px; border: 1px solid var(--border);
   border-radius: var(--radius-sm); white-space: nowrap; cursor: default;
 }
-/* 接続状態は機能シグナル — モノクローム配色の例外として実色を使う */
+/* Connection status is a functional signal — uses real colors as an exception to the monochrome palette */
 .bridge-status.up { color: #7cc78a; border-color: #4d7350; }
 .bridge-status.warn { color: #d39b54; border-color: #7a5a32; }
 .bridge-status.down { color: var(--fg-dim); }
 
-/* ---- レイアウト ---- */
+/* ---- Layout ---- */
 #app { max-width: 1080px; margin: 0 auto; padding: 30px 22px 72px; }
 #footer {
   text-align: center; color: var(--fg-dim); font-size: 12px;
@@ -148,7 +148,7 @@ h2 {
 }
 .subtitle { color: var(--fg-dim); margin: 0 0 26px; font-size: 14px; }
 
-/* ---- ボタン ---- */
+/* ---- Buttons ---- */
 button, .btn {
   font-family: var(--sans); font-size: 13.5px;
   background: var(--bg-panel2); color: var(--fg);
@@ -163,7 +163,7 @@ button.danger { border-color: var(--red); color: var(--red); }
 button.danger:hover { background: #2d2226; color: var(--fg); }
 button:disabled { opacity: .4; cursor: not-allowed; }
 
-/* ---- カードグリッド ---- */
+/* ---- Card grid ---- */
 .grid {
   display: grid; gap: 16px;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -179,18 +179,18 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .card .meta { color: var(--fg-dim); font-size: 12.5px; line-height: 1.7; }
 .card .big { font-size: 28px; color: var(--green-bright); font-weight: 700; }
 
-/* ホーム入口 */
+/* Home entry points */
 .home-actions { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); }
 .home-actions .card { text-align: left; }
 .home-actions .card .ico { font-size: 13px; color: var(--cyan); }
 
-/* 復習「今日やる」カード（0件は disabled・クリック不可） */
+/* Review "do today" card (disabled and not clickable when there are 0 items) */
 .today-card .big { color: var(--green-bright); }
 .card.disabled { cursor: default; opacity: .45; }
 .card.disabled:hover { border-color: var(--border-soft); background: var(--bg-panel); }
 .card.disabled .big { color: var(--fg-dim); }
 
-/* ---- バッジ ---- */
+/* ---- Badges ---- */
 .badge {
   display: inline-block; font-size: 11px; padding: 2px 9px;
   border-radius: 11px; border: 1px solid var(--border); color: var(--fg-dim);
@@ -206,7 +206,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .badge.g-partial { color: var(--amber); border-color: var(--amber); }
 .badge.g-wrong { color: var(--red); border-color: var(--red); }
 
-/* ---- 問題リスト ---- */
+/* ---- Question list ---- */
 .qlist { margin-top: 16px; }
 .qrow {
   display: flex; align-items: center; gap: 12px;
@@ -223,7 +223,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .qrow .qtitle { flex: 1; color: var(--fg); }
 .qrow .qmark { width: 24px; text-align: center; font-size: 15px; }
 
-/* ---- 問題カード (解答画面) ---- */
+/* ---- Question card (answer screen) ---- */
 .qcard {
   background: var(--bg-panel); border: 1px solid var(--border-soft);
   border-radius: var(--radius); padding: 24px;
@@ -241,7 +241,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   color: var(--cyan); font-family: var(--mono); font-size: 13px;
 }
 .qcard .prompt strong { color: var(--fg); }
-/* 環境ボックス（折りたたみ・控えめ） */
+/* Environment box (collapsible, understated) */
 .labbox {
   margin: 12px 0; border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm); background: var(--bg-code);
@@ -257,7 +257,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 .labbox .lab-list li { margin: 3px 0; }
 
-/* アクションバー（常時表示・自己採点を常設） */
+/* Action bar (always visible, with self-grading permanently in place) */
 .action-bar {
   display: flex; gap: 9px; margin-top: 20px;
   align-items: center; flex-wrap: wrap;
@@ -269,7 +269,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .action-bar .ab-spacer { flex: 1; }
 .action-bar .sg-group { display: inline-flex; gap: 7px; flex-wrap: wrap; }
 
-/* 解答表示 */
+/* Solution display */
 .solution {
   margin-top: 20px; border: 1px solid var(--border-soft);
   border-radius: var(--radius); padding: 6px 20px 16px; background: var(--bg-panel2);
@@ -277,17 +277,17 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .solution h3 { color: var(--amber); font-size: 14.5px; }
 .src-note { color: var(--fg-dim); font-size: 12px; font-style: italic; }
 
-/* 自己採点ボタン（アクションバー内に常設） */
+/* Self-grading buttons (permanently in the action bar) */
 .sg-btn { min-width: 92px; }
 .sg-btn.correct.sel { background: #2a2a2f; border-color: var(--green); color: var(--green-bright); }
 .sg-btn.partial.sel { background: #2a2a2f; border-color: var(--amber); color: var(--amber); }
 .sg-btn.wrong.sel { background: #2d2226; border-color: var(--red); color: var(--red); }
 
-/* ナビゲーション行 */
+/* Navigation row */
 .navrow { display: flex; gap: 9px; margin-top: 22px; align-items: center; }
 .navrow .spacer { flex: 1; }
 
-/* ---- Markdown 描画 (解答・ガイド) ---- */
+/* ---- Markdown rendering (solutions / guides) ---- */
 .md { line-height: 1.85; }
 .md pre {
   background: var(--bg-code); border: 1px solid var(--border-soft);
@@ -315,7 +315,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .md li { margin: 3px 0; }
 .md p { margin: 10px 0; }
 
-/* ---- 試験ランタイム ---- */
+/* ---- Exam runtime ---- */
 .exam-layout { display: grid; grid-template-columns: 210px 1fr; gap: 20px; }
 .task-sidebar {
   background: var(--bg-panel); border: 1px solid var(--border-soft);
@@ -332,7 +332,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .task-sidebar .titem .tno { color: var(--fg-dim); width: 26px; font-family: var(--mono); }
 .task-sidebar .titem .tst { margin-left: auto; }
 
-/* ---- 統計 / ダッシュボード ---- */
+/* ---- Statistics / dashboard ---- */
 .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 18px 0; }
 .stat-box {
   background: var(--bg-panel); border: 1px solid var(--border-soft);
@@ -350,7 +350,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   align-items: center; margin: 7px 0; font-size: 13px;
 }
 
-/* 結果テーブル */
+/* Result table */
 .result-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
 .result-table th, .result-table td { border: 1px solid var(--border); padding: 7px 11px; }
 .result-table th { background: var(--bg-panel2); color: var(--cyan); }
@@ -372,7 +372,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg-mid); font-size: 12.5px; }
 
-/* ---- コマンド早見表 (man 風ヘルプ) ---- */
+/* ---- Command quick reference (man-style help) ---- */
 .cmdref {
   margin: 16px 0;
   border: 1px solid var(--border-soft);
@@ -438,7 +438,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   background: var(--bg-panel2); border-radius: 0 3px 3px 0;
 }
 
-/* ---- 検証手順パネル (自己検証) ---- */
+/* ---- Verification steps panel (self-verification) ---- */
 .verifybox {
   margin: 16px 0;
   border: 1px solid var(--border-soft);
@@ -469,7 +469,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   margin-right: 8px; font-size: 12.5px;
 }
 
-/* ---- 落とし穴・試験のポイント (解答ブロック内) ---- */
+/* ---- Pitfalls / exam tips (inside the solution block) ---- */
 .pitfalls {
   margin-top: 16px; padding: 4px 16px 12px;
   background: var(--bg-panel); border: 1px solid var(--amber);
@@ -483,7 +483,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   color: var(--cyan); font-family: var(--mono); font-size: 12.5px;
 }
 
-/* ---- VM 実物採点の結果（SSH ブリッジ） ---- */
+/* ---- VM live-grading results (SSH bridge) ---- */
 .autograde-result {
   margin-top: 18px; border: 1px solid var(--cyan);
   border-radius: var(--radius); padding: 6px 18px 16px;
@@ -500,7 +500,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 .ag-check.fail .ag-mark { color: var(--red); }
 .ag-label { flex: 1; color: var(--fg); }
 .ag-score { font-family: var(--mono); color: var(--fg-mid); font-size: 12.5px; }
-/* 配点0の環境前提チェック: 得点行と区別して控えめに */
+/* Zero-point precondition checks: keep them understated to distinguish from scoring rows */
 .ag-check.precond .ag-label,
 .ag-check.precond .ag-score { color: var(--fg-dim); }
 .ag-check.precond.pass .ag-mark { color: var(--fg-dim); }
@@ -517,7 +517,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 .ag-msg { font-size: 13px; color: var(--fg-mid); padding: 10px 0; }
 .ag-msg.ag-err { color: var(--red); }
 
-/* VM 一括採点中のオーバーレイ */
+/* Overlay during VM batch grading */
 #grading-overlay {
   position: fixed; inset: 0; z-index: 1000;
   background: rgba(0,0,0,0.85);
@@ -553,7 +553,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   border-top: 1px solid var(--border, #333); padding-top: 14px;
 }
 
-/* 採点結果テーブルの source ラベル */
+/* Source label in the grading result table */
 .src-vm {
   display: inline-block; padding: 2px 6px; border-radius: 3px;
   background: rgba(74, 158, 255, 0.18); color: #4a9eff;
@@ -571,7 +571,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   border-color: rgba(74, 158, 255, 0.4) !important;
 }
 
-/* 採点結果テーブルの「採点」セル — 大きな○△×で達成感を出す */
+/* The "judgement" cell in the grading result table — large ○△× for a sense of accomplishment */
 .judgement { text-align: center; padding: 6px 4px; }
 .judgement .big-mark {
   font-size: 40px;
@@ -580,18 +580,18 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   display: inline-block;
 }
 .judgement.perfect .big-mark {
-  color: #e15055;                                    /* 鮮やかなクール赤（合格の○） */
-  -webkit-text-stroke: 2px #e15055;                  /* 輪郭を太く描いて筆ペン風に */
+  color: #e15055;                                    /* vivid cool red (the ○ for pass) */
+  -webkit-text-stroke: 2px #e15055;                  /* draw a thick outline for a brush-pen feel */
   text-stroke: 2px #e15055;
   text-shadow: 0 0 12px rgba(225, 80, 85, 0.45);
   animation: pop-correct .35s cubic-bezier(.34,1.56,.64,1);
 }
 .judgement.partial .big-mark {
-  color: #c69a3e;                                    /* 黄（部分点の△） */
+  color: #c69a3e;                                    /* yellow (the △ for partial credit) */
   -webkit-text-stroke: 1px #c69a3e;
 }
 .judgement.zero .big-mark {
-  color: #7a7c80;                                    /* 灰（×） */
+  color: #7a7c80;                                    /* gray (×) */
   font-weight: 700;
 }
 .judgement.none .big-mark {
@@ -610,7 +610,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 
-/* ===== サーバ指定バッジ（problem prompt 先頭） ===== */
+/* ===== Target-server badge (at the start of the problem prompt) ===== */
 .server-badge {
   display: inline-block;
   padding: 2px 8px;
@@ -639,7 +639,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   background: rgba(198, 154, 62, 0.10);
 }
 
-/* ===== AI 質問チャット（問題画面の右側） ===== */
+/* ===== AI question chat (on the right side of the problem screen) ===== */
 .q-with-chat {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -692,7 +692,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 
 .chat-log {
   flex: 1; overflow-y: auto; padding: 10px;
-  min-height: min(240px, 26vh);  /* 低い窓では縮めて入力欄を絶対に隠さない */
+  min-height: min(240px, 26vh);  /* shrink on short windows so the input field is never hidden */
   font-size: 13px; line-height: 1.55;
 }
 .chat-empty {
@@ -740,8 +740,8 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 }
 .chat-msg-body p { margin: 4px 0; }
 
-/* チャット回答（Markdown）の見出し・リスト・チェックリスト・区切り線
-   フォントサイズは .chat-msg-body（画面幅で可変）を em で継承する */
+/* Headings, lists, checklists, and horizontal rules in chat answers (Markdown).
+   Font size inherits in em from .chat-msg-body (which scales with screen width). */
 .chat-msg-body .md-line { margin: 3px 0; }
 .chat-msg-body .md-h {
   margin: 13px 0 6px; font-size: 1.05em; font-weight: 700;
@@ -760,18 +760,18 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   border: none; border-top: 1px solid var(--border-soft); margin: 13px 0;
 }
 
-/* チャットのモード説明バー（タブの直下に出る・押すと内容が変わる） */
+/* Chat mode-description bar (appears directly below the tabs; its content changes when pressed) */
 .chat-modehint {
   padding: 8px 12px; font-size: 12px; line-height: 1.6;
   color: var(--fg-mid); background: var(--bg-panel2);
   border-bottom: 1px solid var(--border-soft);
 }
-/* タブの選択中をはっきり（既存より詳細度を上げて確実に勝たせる） */
+/* Make the selected tab clearly visible (raise the specificity above the existing rule to win reliably) */
 .chat-modes .chat-mode.active {
   background: var(--accent-soft); color: var(--accent);
   border-color: var(--accent); font-weight: 700;
 }
-/* 空状態（選択中モードの質問例） */
+/* Empty state (example questions for the selected mode) */
 .chat-empty .ce-ex-h {
   font-weight: 700; color: var(--fg-mid); margin-bottom: 5px;
   font-size: 11px; letter-spacing: .04em;
@@ -830,11 +830,11 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 }
 
 /* ============================================================
-   P0/P1 UI 改善 — STEP 見出し / focusedLab / sticky アクションバー
-   pitfalls 3 層 / 補助パネル軽量化 / フィルタチップ / ガイド関連問題
+   P0/P1 UI improvements — STEP headings / focusedLab / sticky action bar
+   3-tier pitfalls / lightweight helper panels / filter chips / guide-related questions
    ============================================================ */
 
-/* ---- STEP 1/2/3 見出し ---- */
+/* ---- STEP 1/2/3 headings ---- */
 .step-label {
   font-size: 12px;
   letter-spacing: 0.02em;
@@ -853,7 +853,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   font-size: 12px;
 }
 
-/* ---- STEP 1.5: 要件リスト（本試験形式の指定項目・課題の直下） ---- */
+/* ---- STEP 1.5: requirements list (the real-exam-style specified items, directly below the task) ---- */
 .spec-list {
   margin: 8px 0 4px;
   padding: 14px 18px 14px 42px;
@@ -884,7 +884,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 }
 .spec-list strong { color: var(--accent); }
 
-/* ---- STEP 2: focusedLab の常時表示部分（対象サーバ等） ---- */
+/* ---- STEP 2: the always-visible part of focusedLab (target server, etc.) ---- */
 .lab-focused {
   padding: 10px 14px;
   color: var(--fg);
@@ -904,7 +904,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 }
 .lab-detail .lab-list li { margin: 3px 0; }
 
-/* ---- 補助パネル（labbox / cmdref / verifybox）軽量化 ---- */
+/* ---- Helper panels (labbox / cmdref / verifybox) made lighter ---- */
 .labbox, .cmdref, .verifybox {
   background: transparent;
 }
@@ -919,7 +919,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   color: var(--fg);
 }
 
-/* ---- sticky アクションバー（問題画面のみ。.qcard padding=24px に揃える） ---- */
+/* ---- Sticky action bar (problem screen only; aligned with .qcard padding=24px) ---- */
 .qcard .action-bar {
   position: sticky;
   bottom: 0;
@@ -931,7 +931,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 }
 .sg-btn { min-height: 38px; padding: 10px 14px; font-weight: 700; }
 
-/* ---- pitfalls 3 層化 ---- */
+/* ---- Pitfalls split into 3 tiers ---- */
 .pitfalls-stacked { margin-top: 6px; }
 .pf-section { margin: 10px 0; }
 .pf-section h4 {
@@ -950,7 +950,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   color: var(--accent); font-family: var(--mono); font-size: 12.5px;
 }
 
-/* ---- 問題一覧フィルタチップ群 ---- */
+/* ---- Question-list filter chips ---- */
 .filter-chips {
   display: flex; gap: 14px; flex-wrap: wrap;
   margin: 12px 0 18px;
@@ -968,7 +968,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
 .filter-chips input[type=checkbox] { accent-color: var(--accent); }
 .filter-chips label:has(input:checked) { color: var(--accent); }
 
-/* ---- ガイド → 関連問題チップ ---- */
+/* ---- Guide → related-question chips ---- */
 .related-questions {
   margin: 12px 0 22px;
   font-size: 13px;
@@ -992,11 +992,11 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   text-decoration: none;
 }
 
-/* ---- ホームの「今日やる」セクション ---- */
+/* ---- Home "do today" section ---- */
 .home-today { margin-top: 4px; }
 .home-today + h2 { margin-top: 30px; }
 
-/* ---- 模擬試験結果の弱点復習 CTA ---- */
+/* ---- Weak-area review CTA on the mock-exam results ---- */
 .exam-review-cta {
   margin: 18px 0;
   padding: 16px 22px;
@@ -1015,7 +1015,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   font-weight: 700; font-size: 15px;
 }
 
-/* ---- ホーム ダッシュボード（合格準備スコア / カテゴリ coverage） ---- */
+/* ---- Home dashboard (exam-readiness score / category coverage) ---- */
 .dash-row {
   display: grid; gap: 14px;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1044,7 +1044,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   color: var(--fg-dim); font-size: 11.5px; text-align: right;
 }
 
-/* ---- core / extra / legacy バッジ ---- */
+/* ---- core / extra / legacy badges ---- */
 .badge.scope-extra {
   color: var(--accent); border-color: var(--accent);
   background: var(--accent-soft);
@@ -1053,7 +1053,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   color: var(--warn); border-color: var(--warn);
 }
 
-/* ---- 問題画面モードトグル（Learn / Practice / Exam） ---- */
+/* ---- Problem-screen mode toggle (Learn / Practice / Exam) ---- */
 .mode-toggle {
   display: inline-flex; gap: 0;
   margin: 0 0 14px;
@@ -1078,7 +1078,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   font-size: 11.5px; color: var(--fg-dim);
   margin: -8px 0 14px; line-height: 1.6;
 }
-/* Practice モードでは早見表/検証/解答を初期非表示 */
+/* In Practice mode the quick reference / verification / solution are hidden initially */
 .qcard.mode-practice .cmdref,
 .qcard.mode-practice .verifybox,
 .qcard.mode-practice .pitfalls,
@@ -1093,7 +1093,7 @@ label.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--fg
   display: block;
 }
 
-/* ===== 採点補助セクション（折りたたみ） ===== */
+/* ===== Grading-helper section (collapsible) ===== */
 details.grading-helper {
   margin: 0.75rem 0 0.25rem;
   padding: 0.5rem 0.75rem;
@@ -1135,7 +1135,7 @@ details.grading-helper pre {
   overflow-x: auto;
 }
 
-/* ===== コードブロック コピーボタン ===== */
+/* ===== Code-block copy button ===== */
 pre.code-with-copy { position: relative; }
 .code-copy-btn {
   position: absolute;
@@ -1164,9 +1164,10 @@ pre.code-with-copy:hover .code-copy-btn { opacity: 1; }
 
 /* ============================================================
    RHCSA10 — Visual Refinement Pass
-   GNOME 47 / RHEL 10 ターミナル路線（暖色ダーク + ゴールド +
-   Cantarell / Source Code Pro）を維持しつつタイポ・階層・モーション
-   を統一する後付け層。既存セレクタは尊重し override / 補強する。
+   An overlay layer that unifies typography, hierarchy, and motion while
+   preserving the GNOME 47 / RHEL 10 terminal aesthetic (warm dark + gold +
+   Cantarell / Source Code Pro). It respects existing selectors and overrides /
+   reinforces them.
    ============================================================ */
 
 :root {
@@ -1178,7 +1179,7 @@ pre.code-with-copy:hover .code-copy-btn { opacity: 1; }
   --ease:         cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* ---- アトモスフィア: 暖かいビネット --------------------------- */
+/* ---- Atmosphere: warm vignette --------------------------- */
 body {
   background:
     radial-gradient(ellipse 1100px 520px at 50% -180px, rgba(216,184,106,0.045), transparent 65%),
@@ -1188,7 +1189,7 @@ body {
   font-feature-settings: "kern", "liga";
 }
 
-/* ---- トップバー --------------------------------------------- */
+/* ---- Top bar --------------------------------------------- */
 #topbar {
   padding: 13px 24px;
   background:
@@ -1200,9 +1201,9 @@ body {
     0 1px 0 rgba(0,0,0,0.4);
 }
 
-/* ---- ブランドマーク -----------------------------------------
+/* ---- Brand mark ---------------------------------------------
    ● RHCSA│10  EXAM PRACTICE
-   ゴールドの脈動ドット + モノスペース + 縦罫 + 控えめなテール
+   Pulsing gold dot + monospace + vertical rule + understated tail
 */
 .brand {
   font-family: var(--mono);
@@ -1248,8 +1249,8 @@ body {
   50%      { opacity: 0.55; box-shadow: 0 0 6px rgba(216,184,106,0.35); }
 }
 
-/* ---- ナビ ---------------------------------------------------
-   bg 変化に頼らず、アクティブはアクセント下線で示す。
+/* ---- Navigation ---------------------------------------------
+   Instead of relying on a background change, indicate the active item with an accent underline.
 */
 #topnav { gap: 4px; }
 #topnav a {
@@ -1271,7 +1272,7 @@ body {
   box-shadow: 0 0 6px rgba(216,184,106,0.55);
 }
 
-/* ---- ブリッジ状態 / タイマー --------------------------------- */
+/* ---- Bridge status / timer --------------------------------- */
 .bridge-status {
   font-family: var(--mono);
   font-size: 12px;
@@ -1281,7 +1282,7 @@ body {
 }
 .exam-timer { font-variant-numeric: tabular-nums; letter-spacing: 0.06em; }
 
-/* ---- 本体タイポ・階層 --------------------------------------- */
+/* ---- Body typography / hierarchy --------------------------- */
 #app { padding-top: 38px; }
 #app > h1 {
   font-size: 26px;
@@ -1304,7 +1305,7 @@ body {
   margin-top: 0;
   margin-bottom: 28px;
 }
-/* セクション h2 を読みやすい中見出し化（prose .md h2 には適用しない） */
+/* Turn section h2 into a readable sub-heading (does not apply to prose .md h2) */
 #app > h2 {
   font-size: 16px;
   font-weight: 700;
@@ -1330,7 +1331,7 @@ body {
   background: linear-gradient(90deg, var(--border-soft), transparent);
 }
 
-/* ---- ダッシュボードのスタットボックス ------------------------ */
+/* ---- Dashboard stat boxes ------------------------------------ */
 .dash-row { gap: 14px; margin-top: 4px; }
 .dash-box {
   position: relative;
@@ -1371,7 +1372,7 @@ body {
   line-height: 1.7;
 }
 
-/* ---- カバレッジ表 ------------------------------------------- */
+/* ---- Coverage table ------------------------------------------- */
 .dash-cover { margin-top: 4px; }
 .dash-cover .cat-stat {
   padding: 8px 12px;
@@ -1404,7 +1405,7 @@ body {
   transition: width .8s var(--ease);
 }
 
-/* ---- カード（home-actions / today / drill / guide 共通）----- */
+/* ---- Cards (shared across home-actions / today / drill / guide) ----- */
 .card {
   position: relative;
   padding: 18px 22px;
@@ -1457,7 +1458,7 @@ body {
   color: var(--accent);
 }
 
-/* today カード: 復習タイプごとに左ストライプを色分け */
+/* today cards: color-code the left stripe by review type */
 .home-today .card { padding-left: 22px; }
 .home-today .card[data-review="wrong"]::after    { background: rgba(197,107,104,0.5); }
 .home-today .card[data-review="partial"]::after  { background: rgba(208,168,92,0.5); }
@@ -1467,7 +1468,7 @@ body {
 .home-today .card[data-review="untouched"]:hover::after{ background: var(--fg-mid); }
 .home-today .card.disabled::after { background: transparent !important; }
 
-/* home-actions カード: → indicator */
+/* home-actions cards: → indicator */
 .home-actions .card h3 {
   display: flex;
   align-items: baseline;
@@ -1487,7 +1488,7 @@ body {
   transform: translateX(3px);
 }
 
-/* ---- 問題カード（qcard）------------------------------------ */
+/* ---- Problem card (qcard) ------------------------------------ */
 .qcard {
   background: var(--bg-panel);
   border: 1px solid var(--border-soft);
@@ -1523,7 +1524,7 @@ body {
   font-size: 14px;
 }
 
-/* sticky アクションバー: ガラス感 */
+/* sticky action bar: glassy feel */
 .qcard .action-bar {
   background:
     linear-gradient(180deg, transparent, var(--bg-panel) 35%);
@@ -1532,7 +1533,7 @@ body {
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* ---- ボタン --------------------------------------------- */
+/* ---- Buttons -------------------------------------------- */
 button, .btn {
   font-size: 13px;
   letter-spacing: 0.02em;
@@ -1574,7 +1575,7 @@ button.danger:hover {
 .sg-btn.partial.sel { box-shadow: inset 0 0 0 1px var(--warn); }
 .sg-btn.wrong.sel   { box-shadow: inset 0 0 0 1px var(--bad); }
 
-/* ---- モードトグル: segmented control 風 ----------------- */
+/* ---- Mode toggle: segmented-control style ----------------- */
 .mode-toggle {
   background: var(--bg-code);
   padding: 3px;
@@ -1599,7 +1600,7 @@ button.danger:hover {
   box-shadow: inset 0 0 0 1px var(--border-soft);
 }
 
-/* ---- バッジ ---------------------------------------------- */
+/* ---- Badges ---------------------------------------------- */
 .badge {
   font-family: var(--mono);
   font-size: 11.5px;
@@ -1609,7 +1610,7 @@ button.danger:hover {
   line-height: 1.7;
 }
 
-/* ---- 結果 verdict ---------------------------------------- */
+/* ---- Result verdict -------------------------------------- */
 .verdict {
   font-family: var(--mono);
   letter-spacing: 0.03em;
@@ -1637,7 +1638,7 @@ button.danger:hover {
   border-color: rgba(216,184,106,0.45);
 }
 
-/* ---- フィルタチップ容器 ---------------------------------- */
+/* ---- Filter-chips container ------------------------------ */
 .filter-chips {
   background: transparent;
   border: 1px solid var(--border-soft);
@@ -1645,7 +1646,7 @@ button.danger:hover {
   padding: 10px 16px;
 }
 
-/* ---- フッタ ---------------------------------------------- */
+/* ---- Footer ---------------------------------------------- */
 #footer {
   font-family: var(--mono);
   font-size: 12.5px;
@@ -1655,7 +1656,7 @@ button.danger:hover {
   color: var(--fg-mid);
 }
 
-/* ---- ロード時スタガー演出 -------------------------------- */
+/* ---- Stagger animation on load --------------------------- */
 @keyframes rhcsa-fade-up {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -1688,7 +1689,7 @@ button.danger:hover {
   }
 }
 
-/* ---- 焦点リング（a11y）---------------------------------- */
+/* ---- Focus ring (a11y) ---------------------------------- */
 button:focus-visible,
 .btn:focus-visible,
 a:focus-visible,
@@ -1700,7 +1701,7 @@ textarea:focus-visible {
   border-radius: 4px;
 }
 
-/* ---- スクロールバー（webkit）---------------------------- */
+/* ---- Scrollbar (webkit) --------------------------------- */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -1710,7 +1711,7 @@ textarea:focus-visible {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--border); }
 
-/* ---- 数字を含むセルはすべて tabular-nums で揃える -------- */
+/* ---- Align all cells that contain numbers with tabular-nums -------- */
 .qrow .qid,
 .stat-box .num,
 .cs-detail,
@@ -1719,7 +1720,7 @@ textarea:focus-visible {
 .result-table td,
 .cr-syntax code { font-variant-numeric: tabular-nums; }
 
-/* ---- モバイル微調整 -------------------------------------- */
+/* ---- Mobile fine-tuning --------------------------------- */
 @media (max-width: 720px) {
   #topbar { padding: 11px 16px; gap: 12px; }
   #app > h1 { font-size: 22px; }
@@ -1728,18 +1729,18 @@ textarea:focus-visible {
 }
 
 /* ============================================================
-   AI 家庭教師（チャットペイン）— 読みやすさ + 使いやすさ強化
-   既存 .chat-* セレクタを override してフォント / 余白 / 入力域を
-   人間が長文で使えるサイズに拡張する。
+   AI tutor (chat pane) — readability + usability enhancements
+   Overrides the existing .chat-* selectors to expand the font / spacing / input
+   area to sizes a human can comfortably use for long text.
    ============================================================ */
 
-/* 問題画面のグリッド: チャット領域を 360px → 420px に拡幅 */
+/* Problem-screen grid: widen the chat area from 360px → 420px */
 .q-with-chat {
   grid-template-columns: minmax(0, 1fr) 420px;
   gap: 22px;
 }
 
-/* チャットペイン全体 */
+/* The chat pane as a whole */
 .chat-pane {
   top: 78px;
   max-height: calc(100vh - 100px);
@@ -1749,7 +1750,7 @@ textarea:focus-visible {
   box-shadow: 0 6px 24px rgba(0,0,0,0.28);
 }
 
-/* ヘッダ */
+/* Header */
 .chat-head {
   padding: 12px 16px;
   background:
@@ -1781,7 +1782,7 @@ textarea:focus-visible {
 .chat-status.ok  { color: #8fbc8f; border-color: rgba(143,188,143,0.5); }
 .chat-status.off { color: var(--fg-dim); }
 
-/* モード切替バー */
+/* Mode switch bar */
 .chat-modes {
   padding: 8px 8px;
   gap: 6px;
@@ -1811,7 +1812,7 @@ textarea:focus-visible {
   border-color: var(--accent);
 }
 
-/* メッセージログ領域 */
+/* Message log area */
 .chat-log {
   padding: 16px;
   min-height: 280px;
@@ -1839,7 +1840,7 @@ textarea:focus-visible {
   border: 1px solid var(--border-soft);
 }
 
-/* 各メッセージ */
+/* Each message */
 .chat-msg { margin-bottom: 14px; }
 .chat-msg::before {
   display: block;
@@ -1910,7 +1911,7 @@ textarea:focus-visible {
   color: var(--accent);
 }
 
-/* 入力エリア */
+/* Input area */
 .chat-input-row {
   padding: 12px;
   gap: 8px;
@@ -1966,7 +1967,7 @@ textarea:focus-visible {
   cursor: not-allowed;
 }
 
-/* フッタ */
+/* Footer */
 .chat-foot {
   padding: 6px 12px;
   border-top: 1px solid var(--border-soft);
@@ -1985,7 +1986,7 @@ textarea:focus-visible {
   background: rgba(197,107,104,0.08);
 }
 
-/* チャットスクロールバー（webkit） */
+/* Chat scrollbar (webkit) */
 .chat-log::-webkit-scrollbar { width: 8px; }
 .chat-log::-webkit-scrollbar-thumb {
   background: var(--border-soft);
@@ -1994,7 +1995,7 @@ textarea:focus-visible {
 }
 .chat-log::-webkit-scrollbar-thumb:hover { background: var(--border); }
 
-/* 小型画面: 縦並びで高さを確保 */
+/* Small screens: stack vertically to ensure enough height */
 @media (max-width: 1100px) {
   .q-with-chat { grid-template-columns: 1fr; gap: 18px; }
   .chat-pane {
@@ -2006,11 +2007,11 @@ textarea:focus-visible {
 }
 
 /* ============================================================
-   STUDY MODE — 大画面ワイドレイアウト + 楽しい演出
-   問題画面 + AI 家庭教師を「集中できる広い学習スペース」に拡張。
+   STUDY MODE — large-screen wide layout + fun touches
+   Expands the problem screen + AI tutor into a "wide, focused study space."
    ============================================================ */
 
-/* 1. レイアウト: チャット同居時に #app を大幅に拡張 */
+/* 1. Layout: greatly expand #app when the chat is alongside */
 #app:has(.q-with-chat) {
   max-width: min(96vw, 1480px);
   padding: 36px 28px 80px;
@@ -2019,7 +2020,7 @@ textarea:focus-visible {
   max-width: min(95vw, 1320px);
 }
 
-/* 2. 問題 + チャットのグリッド: チャット 480px、ギャップ広め */
+/* 2. Problem + chat grid: chat 480px, wider gap */
 .q-with-chat {
   grid-template-columns: minmax(0, 1fr) 480px;
   gap: 28px;
@@ -2031,7 +2032,7 @@ textarea:focus-visible {
   }
 }
 
-/* 3. プロンプト本文: 学習ターゲットなので一段とリッチに */
+/* 3. Prompt body: it's the learning target, so make it noticeably richer */
 .qcard {
   padding: 28px 30px;
 }
@@ -2046,29 +2047,29 @@ textarea:focus-visible {
   font-size: 18.5px;
   line-height: 1.95;
   padding: 26px 30px;
-  border-left-width: 4px;          /* 輪郭を強める（was 3px）*/
-  background: #2d3037;             /* 問題文＝主役: 他パネル(#26292e)より一段明るく */
-  box-shadow: 0 0 0 1px var(--border);  /* 暗い背景でボックスの境界を出す */
+  border-left-width: 4px;          /* strengthen the outline (was 3px) */
+  background: #2d3037;             /* the problem text is the star: one step brighter than other panels (#26292e) */
+  box-shadow: 0 0 0 1px var(--border);  /* bring out the box boundary on the dark background */
 }
 .qcard .prompt code {
-  font-size: 16.5px;               /* 一番読みたいコマンド名を本文と同等に（was 14.5px）*/
+  font-size: 16.5px;               /* make the most-read command names match the body text (was 14.5px) */
   padding: 3px 8px;
 }
 .qcard .prompt strong { color: var(--accent); }
-/* 要件リストも課題と同じ「主役の明るさ」に揃える */
+/* Align the requirements list to the same "star" brightness as the task */
 .spec-list {
   background: #2d3037;
   border-color: var(--border);
   border-left-color: var(--accent);
 }
 
-/* sticky アクションバーを新 padding に合わせる */
+/* Adjust the sticky action bar to the new padding */
 .qcard .action-bar {
   margin: 22px -30px -28px;
   padding: 14px 30px;
 }
 
-/* 4. AI チャット: 読みやすい大判フォント + 広い入力 */
+/* 4. AI chat: readable large-format font + roomy input */
 .chat-pane {
   top: 78px;
   max-height: calc(100vh - 100px);
@@ -2082,7 +2083,7 @@ textarea:focus-visible {
 .chat-log {
   font-size: 15.5px;
   line-height: 1.8;
-  min-height: min(340px, 26vh);  /* 固定340pxだと低い窓で合計がペイン上限を超え入力欄下端が切れる */
+  min-height: min(340px, 26vh);  /* a fixed 340px would make the total exceed the pane cap on short windows and clip the bottom of the input */
   padding: 18px;
 }
 .chat-msg { margin-bottom: 18px; }
@@ -2117,7 +2118,7 @@ textarea:focus-visible {
   min-width: 84px;
 }
 
-/* 5. 空状態を「TUTOR からのヒント」カードに格上げ */
+/* 5. Promote the empty state into a "hint from the TUTOR" card */
 .chat-empty {
   padding: 18px 18px 20px;
   background: linear-gradient(180deg, rgba(216,184,106,0.08), rgba(216,184,106,0.02));
@@ -2129,7 +2130,7 @@ textarea:focus-visible {
   color: var(--fg);
 }
 .chat-empty::before {
-  content: "✦ TUTOR からのヒント";
+  content: "✦ Hint from the TUTOR";
   display: block;
   font-family: var(--mono);
   font-size: 12px;
@@ -2149,7 +2150,7 @@ textarea:focus-visible {
   color: var(--accent);
 }
 
-/* 6. ストリーミングインジケータ: 光るカーソル */
+/* 6. Streaming indicator: glowing cursor */
 .chat-msg.streaming .chat-msg-body::after {
   content: "▍";
   color: var(--accent);
@@ -2162,7 +2163,7 @@ textarea:focus-visible {
   50%      { text-shadow: 0 0 16px rgba(216,184,106,0.95); }
 }
 
-/* 7. EXAM モード時のブランドバッジ（緊張感を演出） */
+/* 7. Brand badge in EXAM mode (conveys a sense of tension) */
 body:has(.exam-layout) .brand::after {
   content: "● EXAM";
   margin-left: 14px;
@@ -2184,7 +2185,7 @@ body:has(.exam-layout) .brand::after {
   50%      { opacity: 1;    box-shadow: 0 0 12px rgba(197,107,104,0.4); }
 }
 
-/* 8. 正解時のセレブレーション ---------------- */
+/* 8. Celebration on a correct answer ---------------- */
 .sg-btn.correct.sel { animation: correct-bounce 0.5s ease-out; }
 @keyframes correct-bounce {
   0%   { transform: scale(1); }
@@ -2200,7 +2201,7 @@ body:has(.exam-layout) .brand::after {
   75%     { transform: translateX(3px); }
 }
 
-/* ○ の周囲に放射状の光バースト */
+/* Radial burst of light around the ○ */
 .judgement.perfect {
   position: relative;
   isolation: isolate;
@@ -2223,14 +2224,14 @@ body:has(.exam-layout) .brand::after {
   100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
 }
 
-/* 9. カード hover にゴールドのソフトグロー追加 */
+/* 9. Add a soft gold glow to card hover */
 .card:hover {
   box-shadow:
     0 8px 26px rgba(0,0,0,0.32),
     0 0 28px rgba(216,184,106,0.08);
 }
 
-/* 10. 解答 / 採点結果出現時のフェード演出 */
+/* 10. Fade animation when the solution / grading results appear */
 .qcard .solution,
 .qcard .autograde-result,
 .qcard .pitfalls,
@@ -2238,18 +2239,18 @@ body:has(.exam-layout) .brand::after {
   animation: rhcsa-fade-up 0.55s var(--ease) both;
 }
 
-/* 11. アクションバーボタン hover lift */
+/* 11. Hover lift on action-bar buttons */
 .action-bar button:not(:disabled):not(.sel):hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-/* 12. ナビアクティブに微かな光輝 */
+/* 12. Subtle glow on the active nav item */
 #topnav a.active {
   text-shadow: 0 0 14px rgba(216,184,106,0.45);
 }
 
-/* 13. プログレスバーの leading edge にピカッと光るアクセント */
+/* 13. A bright accent flash at the leading edge of the progress bar */
 .bar > span {
   position: relative;
   overflow: hidden;
@@ -2263,13 +2264,13 @@ body:has(.exam-layout) .brand::after {
   filter: blur(1px);
 }
 
-/* 14. dash-num にカウントアップの「フォーカス」グロー */
+/* 14. A "focus" glow on dash-num for the count-up */
 .dash-box:hover .dash-num {
   text-shadow: 0 0 16px rgba(216,184,106,0.5);
   transition: text-shadow 0.3s var(--ease);
 }
 
-/* 15. ホームの「今日やる」カードに学習意欲を煽る hover */
+/* 15. Hover on the home "do today" cards that builds study motivation */
 .home-today .card:not(.disabled):hover {
   box-shadow:
     0 8px 26px rgba(0,0,0,0.32),
@@ -2280,7 +2281,7 @@ body:has(.exam-layout) .brand::after {
   transition: color 0.18s var(--ease);
 }
 
-/* 16. 試験タイマーが warn/danger になったら脈動 */
+/* 16. Pulse the exam timer when it enters warn/danger */
 .exam-timer.warn { animation: timer-warn 2s ease-in-out infinite; }
 .exam-timer.danger { animation: timer-danger 1s ease-in-out infinite; }
 @keyframes timer-warn {
@@ -2292,7 +2293,7 @@ body:has(.exam-layout) .brand::after {
   50%     { box-shadow: 0 0 16px rgba(197,107,104,0.7); transform: scale(1.02); }
 }
 
-/* 17. 小型画面ではチャット拡張をリセット */
+/* 17. Reset the chat expansion on small screens */
 @media (max-width: 1100px) {
   #app:has(.q-with-chat) { padding: 28px 18px 60px; }
   .qcard { padding: 22px 22px; }
@@ -2305,18 +2306,18 @@ body:has(.exam-layout) .brand::after {
 }
 
 /* ============================================================
-   FINAL REVIEW 反映 — P0/P1/P2 拡張
-   - Class A/B バッジ + Class B 警告
-   - 次アクションパネル
-   - 今日の達成バナー / 連続学習 streak
-   - カテゴリ到達ランク
-   - AI 家庭教師の折りたたみ
-   - 大きい「次の問題へ」+ sticky action bar コンパクト化
-   - 模擬試験 本番モード演出
-   - キーボードショートカット ヘルプ
+   FINAL REVIEW applied — P0/P1/P2 expansions
+   - Class A/B badges + Class B warning
+   - Next-actions panel
+   - Today's achievement banner / continuous-study streak
+   - Category attainment rank
+   - Collapsible AI tutor
+   - Large "Next problem" button + compacted sticky action bar
+   - Mock-exam real-mode presentation
+   - Keyboard shortcut help
    ============================================================ */
 
-/* ---- 採点品質バッジ (Class A / B) ----------------------- */
+/* ---- Grading-quality badges (Class A / B) --------------- */
 .badge.grader-a {
   color: var(--ok);
   border-color: rgba(143,188,143,0.6);
@@ -2330,7 +2331,7 @@ body:has(.exam-layout) .brand::after {
   font-weight: 700;
 }
 
-/* ---- Class B 採点結果の警告 ----------------------------- */
+/* ---- Class B grading-result warning --------------------- */
 .autograde-result.is-classb { border-color: rgba(208,168,92,0.5); }
 .ag-classb-warn {
   margin: 6px 0 14px;
@@ -2355,7 +2356,7 @@ body:has(.exam-layout) .brand::after {
 }
 .ag-classb-warn strong + p strong { color: var(--warn); }
 
-/* ---- 次アクションパネル -------------------------------- */
+/* ---- Next-actions panel -------------------------------- */
 .next-actions {
   margin: 22px 0 4px;
   padding: 18px 22px 16px;
@@ -2419,7 +2420,7 @@ body:has(.exam-layout) .brand::after {
 }
 .na-btn.primary .na-sub { color: rgba(26,22,17,0.7); }
 
-/* ---- 今日の達成バナー ---------------------------------- */
+/* ---- Today's achievement banner ------------------------ */
 .today-banner {
   display: flex;
   align-items: center;
@@ -2459,7 +2460,7 @@ body:has(.exam-layout) .brand::after {
 }
 .today-banner strong { color: var(--accent); }
 
-/* ---- カテゴリ到達ランク -------------------------------- */
+/* ---- Category attainment rank -------------------------- */
 .rank-badge {
   display: inline-block;
   margin-left: 6px;
@@ -2483,7 +2484,7 @@ body:has(.exam-layout) .brand::after {
 }
 .rank-none       { color: var(--fg-dim); border-color: var(--border-soft); }
 
-/* ---- AI 家庭教師: 折りたたみトグル ---------------------- */
+/* ---- AI tutor: collapse toggle ------------------------- */
 .chat-pane.collapsed .chat-body { display: none; }
 .chat-pane.collapsed {
   background: var(--bg-panel);
@@ -2495,8 +2496,8 @@ body:has(.exam-layout) .brand::after {
 }
 .chat-pane.open .chat-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .chat-pane.open { display: flex; flex-direction: column; }
-/* 高さが足りないときに縮む（=スクロールする）のはログだけ。
-   ヘッダ・モード・入力欄・フッターは絶対に潰さない・隠さない */
+/* When height is short, only the log shrinks (i.e., scrolls).
+   The header, modes, input field, and footer are never collapsed or hidden. */
 .chat-pane.open .chat-head,
 .chat-pane.open .chat-modes,
 .chat-pane.open .chat-modehint,
@@ -2540,14 +2541,14 @@ body:has(.exam-layout) .brand::after {
 }
 .chat-pane.open .chat-toggle { border-bottom: 1px solid var(--border-soft); }
 
-/* 折りたたみ時はチャットペインを画面右上に小さく */
+/* When collapsed, keep the chat pane small in the top-right of the screen */
 .chat-pane.collapsed {
   position: sticky;
   top: 78px;
   height: auto;
   align-self: start;
 }
-/* チャットが閉じている時はメインカラムを広げる */
+/* When the chat is closed, widen the main column */
 .q-with-chat:has(.chat-pane.collapsed) {
   grid-template-columns: minmax(0, 1fr) 240px;
 }
@@ -2555,7 +2556,7 @@ body:has(.exam-layout) .brand::after {
   .q-with-chat:has(.chat-pane.collapsed) { grid-template-columns: 1fr; }
 }
 
-/* ---- 大きい「次の問題へ」ボタン群 ---------------------- */
+/* ---- Large "Next problem" button group ----------------- */
 .navrow.big-navrow {
   margin-top: 28px;
   padding-top: 22px;
@@ -2579,7 +2580,7 @@ body:has(.exam-layout) .brand::after {
   box-shadow: 0 6px 22px rgba(216,184,106,0.32) !important;
 }
 
-/* ---- sticky action bar をコンパクトに ---------------- */
+/* ---- Compact the sticky action bar --------------------- */
 .qcard .action-bar {
   padding: 10px 30px !important;
 }
@@ -2588,7 +2589,7 @@ body:has(.exam-layout) .brand::after {
   .qcard .action-bar { padding: 10px 22px !important; }
 }
 
-/* ---- 模擬試験「本番モード」演出 ---------------------- */
+/* ---- Mock-exam "real mode" presentation ---------------- */
 .exam-mode-banner {
   display: flex;
   align-items: center;
@@ -2613,7 +2614,7 @@ body:has(.exam-layout) .brand::after {
 }
 .exam-mode-banner strong { color: var(--bad); letter-spacing: 0.04em; }
 
-/* BOSS（supplementary sample）カード */
+/* BOSS (supplementary sample) card */
 .card.exam-boss {
   border-color: rgba(216,184,106,0.5);
   background:
@@ -2635,7 +2636,7 @@ body:has(.exam-layout) .brand::after {
   letter-spacing: 0.06em;
 }
 
-/* ---- キーボードショートカット ヘルプ ------------------ */
+/* ---- Keyboard shortcut help ---------------------------- */
 #shortcut-help {
   position: fixed;
   inset: 0;
@@ -2705,7 +2706,7 @@ body:has(.exam-layout) .brand::after {
   text-align: center;
 }
 
-/* ---- フッタ ショートカットヒント ------------------------ */
+/* ---- Footer shortcut hint ------------------------------- */
 .footer-hint {
   display: inline-block;
   margin-left: 10px;
@@ -2727,38 +2728,38 @@ body:has(.exam-layout) .brand::after {
 }
 
 /* ============================================================
-   AI 家庭教師の回答を「読みやすく」する（2026-06-09）
-   - コードブロックが横にはみ出て見切れる問題 → 折り返す
-   - 長文回答（落とし穴・つまずき等）の階層を立て、余白と
-     inline code のノイズを減らして「壁」感を解消する。
-   ファイル末尾＝最終ソース順なので全幅で確実に勝つ。
-   フォントサイズは触らずレスポンシブ設定を温存する。
+   Making AI tutor answers "easier to read" (2026-06-09)
+   - Code blocks running off the side and getting clipped → wrap them
+   - For long answers (pitfalls, common stumbles, etc.), build up the hierarchy and
+     reduce inline-code noise with more spacing to break the "wall of text" feel.
+   This is at the end of the file = last in source order, so it reliably wins at full width.
+   Font sizes are left untouched, preserving the responsive settings.
    ============================================================ */
 
-/* 1. コードブロックは折り返して全文を見せる（横スクロールに逃がさない） */
+/* 1. Code blocks wrap so the full text is visible (don't escape into horizontal scroll) */
 .chat-msg-body pre {
-  white-space: pre-wrap;       /* 長い行・末尾コメントを次行へ折り返す */
-  overflow-wrap: anywhere;     /* 1語が幅を超えるときだけ途中で折る */
+  white-space: pre-wrap;       /* wrap long lines and trailing comments to the next line */
+  overflow-wrap: anywhere;     /* break mid-word only when a single word exceeds the width */
   tab-size: 2;
 }
 
-/* 2. inline code: 枠線を外して陰影だけの落ち着いたチップに（多数並んでもうるさくない） */
+/* 2. inline code: drop the border for a calm, shadow-only chip (not noisy even when many appear in a row) */
 .chat-msg-body code {
   background: var(--accent-soft);
   border: none;
 }
-/* コードブロック内の code は従来どおり透明（pre のスタイルを邪魔しない） */
+/* code inside a code block stays transparent as before (doesn't interfere with the pre styling) */
 .chat-msg-body pre code { background: transparent; }
 
-/* 3. 見出しの階層づけ — ## はタイトル / ### はセクション仕切り */
-.chat-msg-body h4.md-h {           /* ## … 回答全体のタイトル */
+/* 3. Heading hierarchy — ## is the title / ### is a section divider */
+.chat-msg-body h4.md-h {           /* ## … the title of the whole answer */
   margin: 18px 0 10px;
   padding-bottom: 7px;
   font-size: 1.18em;
   color: var(--accent);
   border-bottom: 1px solid var(--border-soft);
 }
-.chat-msg-body h5.md-h {           /* ### … 各セクションの見出し（要点 / よくあるミス 等） */
+.chat-msg-body h5.md-h {           /* ### … the heading of each section (key points / common mistakes, etc.) */
   margin: 20px 0 9px;
   padding: 3px 0 3px 11px;
   border-left: 3px solid var(--accent);
@@ -2769,17 +2770,17 @@ body:has(.exam-layout) .brand::after {
 .chat-msg-body h4.md-h:first-child,
 .chat-msg-body h5.md-h:first-child { margin-top: 2px; }
 
-/* 4. 箇条書きに余白を与えて1項目ずつ読ませる（行間の詰まりを解消） */
+/* 4. Give bullet lists more spacing so each item reads one at a time (relieves cramped line spacing) */
 .chat-msg-body ul,
 .chat-msg-body ol { margin: 9px 0 12px; padding-left: 1.45em; }
 .chat-msg-body li { margin: 8px 0; }
 .chat-msg-body li::marker { color: var(--fg-mid); }
 
-/* 5. 縦1カラム（スマホ・狭い窓）では家庭教師パネルを高さで頭打ちにしない。
-      従来は max-height:calc(100vh-100px) で画面高に制限され、長い解説が
-      内部スクロールの小窓に押し込まれて「下が隠れる」状態だった。
-      キャップを外し、中身を全部見せてページ側でスクロールさせる。
-      （横並びサイドバー時=>1100px は追従内部スクロールのまま維持） */
+/* 5. In single-column layouts (mobile / narrow windows), don't cap the tutor panel's height.
+      Previously it was constrained by max-height:calc(100vh-100px) to the viewport height,
+      pushing long explanations into a small internally-scrolling window so "the bottom got hidden."
+      Remove the cap and show everything, letting the page itself scroll.
+      (For the side-by-side sidebar at >=1100px, keep the floating internal scroll as-is.) */
 @media (max-width: 1100px) {
   .chat-pane.open { max-height: none; }
 }

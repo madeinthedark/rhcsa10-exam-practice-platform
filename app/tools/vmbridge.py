@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-vmbridge.py — RHCSA10 exam practice / SSH ブリッジ（自動採点の中継プログラム）
+vmbridge.py — RHCSA10 exam practice / SSH bridge (relay program for automated grading)
 
-ブラウザ(http://localhost:8765) からの HTTP リクエストを受け、SSH 経由で
-実機 RHEL 10 VM に「検証コマンド」を実行し、その結果を返す。
+Receives HTTP requests from the browser (http://localhost:8765), runs "verification
+commands" on the real RHEL 10 VM over SSH, and returns the results.
 
-設計（MVP 設計書 §6 準拠）:
-  - ブラウザは questionId のみ送信。実行コマンドはこのスクリプトが
-    manual_overrides.json の「信頼済み grader 定義」から解決する
-    （ブラウザから任意コマンドは受け取らない）。
-  - 127.0.0.1 のみ bind。起動時にランダム token を発行。
-  - CORS は allowed_origins のみ許可。POST は JSON のみ。Origin を検証。
-  - SSH は ControlMaster で多重化（初回接続のみコスト、以降は再利用）。
-  - grader.checks は原則 read-only。状態変更系は将来の /reset・/reboot のみ。
+Design (conforms to MVP design document §6):
+  - The browser only sends questionId. This script resolves the command to run
+    from the "trusted grader definitions" in manual_overrides.json
+    (it never accepts arbitrary commands from the browser).
+  - Binds to 127.0.0.1 only. Issues a random token at startup.
+  - CORS allows only allowed_origins. POST accepts JSON only. Validates Origin.
+  - SSH is multiplexed with ControlMaster (only the first connection has cost,
+    subsequent ones are reused).
+  - grader.checks are read-only in principle. State-changing operations are reserved
+    for the future /reset and /reboot only.
 
-使い方:
-  1. vmbridge.config.example.json を vmbridge.config.json にコピーして編集
+Usage:
+  1. Copy vmbridge.config.example.json to vmbridge.config.json and edit it
   2. python3 app/tools/vmbridge.py
-  3. http://localhost:8765/index.html を開く
+  3. Open http://localhost:8765/index.html
 
-Python3 標準ライブラリのみ。
+Python 3 standard library only.
 """
 
 import json
@@ -43,40 +45,40 @@ CONTROL_PATH = os.path.join(tempfile.gettempdir(), "rhcsa_vmbridge_ssh.sock")
 
 DEFAULT_ORIGINS = ["http://localhost:8765", "http://127.0.0.1:8765"]
 
-# 起動時に1度だけ発行するトークン（/grade の認証に使用）
+# Token issued only once at startup (used to authenticate /grade)
 TOKEN = secrets.token_urlsafe(24)
 
 
 # ---------------------------------------------------------------------------
-# 設定・grader 定義の読み込み
+# Loading config and grader definitions
 # ---------------------------------------------------------------------------
 def load_config():
-    """vmbridge.config.json を読む。無ければ None（/status が ok:false を返す）。"""
+    """Read vmbridge.config.json. Returns None if it does not exist (/status returns ok:false)."""
     if not os.path.exists(CONFIG_PATH):
-        return None, "vmbridge.config.json が無い（vmbridge.config.example.json をコピーして編集してください）"
+        return None, "vmbridge.config.json is missing (please copy vmbridge.config.example.json and edit it)"
     try:
         with open(CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
     except json.JSONDecodeError as e:
-        return None, "vmbridge.config.json の JSON が不正: %s" % e
+        return None, "Invalid JSON in vmbridge.config.json: %s" % e
     for key in ("ssh_host", "ssh_user", "ssh_key"):
         if not cfg.get(key):
-            return None, "vmbridge.config.json に %s がない" % key
+            return None, "vmbridge.config.json is missing %s" % key
     cfg.setdefault("ssh_port", 22)
     cfg.setdefault("bridge_port", 8770)
     cfg.setdefault("allowed_origins", DEFAULT_ORIGINS)
-    # ServerA 上で実行する「ServerB への ssh コマンド」のマクロ。
-    # grader.checks[].cmd 中の ${SSH_B} がこれに展開される。supplementary exam set
-    # のような複数 VM 試験で、ServerA 経由で ServerB を判定するときに使う。
+    # Macro for the "ssh command to ServerB" that runs on ServerA.
+    # ${SSH_B} in grader.checks[].cmd expands to this. Used for multi-VM exams
+    # like the supplementary exam set, when judging ServerB via ServerA.
     cfg.setdefault(
         "serverb_ssh",
-        # ServerA 内で実行される ServerB への SSH。ControlMaster で多重化することで、
-        # 同一スクリプト内の連続呼び出し（複数 check）を 1 つの接続に集約する。
+        # SSH to ServerB executed from within ServerA. By multiplexing with ControlMaster,
+        # consecutive calls within the same script (multiple checks) are consolidated into one connection.
         "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5"
         " -o ControlMaster=auto -o ControlPath=/tmp/rhcsa_ssh_b_%C.sock"
         " -o ControlPersist=60 root@192.0.2.11",
     )
-    # AI 質問チャット（任意）。anthropic_api_key が設定されていれば /chat が有効。
+    # AI question chat (optional). /chat is enabled if anthropic_api_key is set.
     cfg.setdefault("anthropic_api_key", "")
     cfg.setdefault("anthropic_model", "claude-haiku-4-5")
     cfg["ssh_key"] = os.path.expanduser(cfg["ssh_key"])
@@ -84,24 +86,24 @@ def load_config():
 
 
 # ---------------------------------------------------------------------------
-# 例外
+# Exceptions
 # ---------------------------------------------------------------------------
 class GradeError(Exception):
-    """run_grade が「checks 配列」を返せなかった場合に送出する。
-    do_POST 側で 502 として返却する。"""
+    """Raised when run_grade could not return a "checks array".
+    Returned as a 502 on the do_POST side."""
 
 
 def load_graders():
-    """manual_overrides.json から「信頼済み grader 定義」を
-    { qid: { checks: [...], helperCmds: [...] } } で返す。
-    helperCmds は採点時に自動で `rhcsa_done <qid> '<cmd1>' ...` として VM 上で先に流す。
-    これによりユーザーが手で rhcsa_done を打たなくても /tmp/.rhcsa_<qid>_done が生成される。"""
+    """Return the "trusted grader definitions" from manual_overrides.json as
+    { qid: { checks: [...], helperCmds: [...] } }.
+    helperCmds are automatically run on the VM first during grading as `rhcsa_done <qid> '<cmd1>' ...`.
+    This generates /tmp/.rhcsa_<qid>_done without the user having to run rhcsa_done by hand."""
     graders = {}
     try:
         with open(OVERRIDES_PATH, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
-        print("[WARN] manual_overrides.json を読めない: %s" % e, file=sys.stderr)
+        print("[WARN] cannot read manual_overrides.json: %s" % e, file=sys.stderr)
         return graders
     for qid, ov in (data.get("overrides") or {}).items():
         g = ov.get("grader")
@@ -114,8 +116,8 @@ def load_graders():
 
 
 def load_question_contexts():
-    """questions.js を読んで { qid: {title, prompt, lab, solutionText, pitfalls} } を返す。
-    AI チャットの問題コンテキスト注入に使う（信頼済みデータ）。"""
+    """Read questions.js and return { qid: {title, prompt, lab, solutionText, pitfalls} }.
+    Used for injecting question context into the AI chat (trusted data)."""
     contexts = {}
     qpath = os.path.join(APP_DIR, "js", "data", "questions.js")
     if not os.path.exists(qpath):
@@ -139,22 +141,22 @@ def load_question_contexts():
                 "qno": q.get("qno"),
             }
     except (OSError, json.JSONDecodeError, ValueError) as e:
-        print("[WARN] questions.js を読めない: %s" % e, file=sys.stderr)
+        print("[WARN] cannot read questions.js: %s" % e, file=sys.stderr)
     return contexts
 
 
 # ---------------------------------------------------------------------------
-# SSH 実行（ControlMaster で多重化）
+# SSH execution (multiplexed with ControlMaster)
 # ---------------------------------------------------------------------------
 def ssh_base(cfg):
     return [
         "ssh",
-        "-o", "BatchMode=yes",                       # パスワードプロンプトを出さない（鍵認証のみ）
+        "-o", "BatchMode=yes",                       # do not show a password prompt (key auth only)
         "-o", "ConnectTimeout=5",
         "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "ControlMaster=auto",                  # 接続を多重化
+        "-o", "ControlMaster=auto",                  # multiplex the connection
         "-o", "ControlPath=" + CONTROL_PATH,
-        "-o", "ControlPersist=60",                   # 60秒は接続を保持して再利用
+        "-o", "ControlPersist=60",                   # keep the connection for 60 seconds and reuse it
         "-i", cfg["ssh_key"],
         "-p", str(cfg["ssh_port"]),
         "%s@%s" % (cfg["ssh_user"], cfg["ssh_host"]),
@@ -162,9 +164,10 @@ def ssh_base(cfg):
 
 
 def ssh_run(cfg, remote_args, stdin_data=None, timeout=90):
-    """SSH でリモートコマンドを実行。(exit_code, stdout, stderr) を返す。
-    timeout の既定は 90 秒。ServerA→ServerB の二段 SSH を多数行う grader
-    （supplementary exam set t7q6-12 など）でも余裕で完走するため余裕を持たせる。"""
+    """Run a remote command over SSH. Returns (exit_code, stdout, stderr).
+    The default timeout is 90 seconds. Generous so that graders doing many
+    two-hop ServerA->ServerB SSH calls (e.g. supplementary exam set t7q6-12)
+    complete with plenty of margin."""
     try:
         proc = subprocess.run(
             ssh_base(cfg) + remote_args,
@@ -173,15 +176,15 @@ def ssh_run(cfg, remote_args, stdin_data=None, timeout=90):
     except subprocess.TimeoutExpired:
         return 124, "", "SSH timeout"
     except FileNotFoundError:
-        return 127, "", "ssh コマンドが見つからない"
+        return 127, "", "ssh command not found"
     except Exception as e:                            # noqa: BLE001
-        return 1, "", "SSH 実行エラー: %s" % e
+        return 1, "", "SSH execution error: %s" % e
 
 
 def vm_status(cfg):
-    """VM 到達確認。{ ok, hostname, error } を返す。"""
+    """Check VM reachability. Returns { ok, hostname, error }."""
     if cfg is None:
-        return {"ok": False, "error": "config 未設定"}
+        return {"ok": False, "error": "config not set"}
     rc, out, err = ssh_run(cfg, ["hostname"], timeout=8)
     if rc == 0:
         return {"ok": True, "hostname": out.strip()}
@@ -189,33 +192,33 @@ def vm_status(cfg):
 
 
 def expand_macros(cmd, cfg):
-    """grader.checks[].cmd 中の ${SSH_B} 等を config の値に展開する。
-    展開対象は信頼済み grader 定義の固定マクロのみ（任意置換はしない）。"""
+    """Expand ${SSH_B} and the like in grader.checks[].cmd to the values from config.
+    Only the fixed macros of trusted grader definitions are expanded (no arbitrary substitution)."""
     return cmd.replace("${SSH_B}", cfg.get("serverb_ssh", ""))
 
 
 def build_check_script(checks, cfg, qid=None, helper_cmds=None):
-    """信頼済み checks から、1回の SSH でバッチ実行するシェルスクリプトを生成。
-    各 check は終了コード 0 = 合格。出力は 'id<TAB>exitcode' の行。
+    """Generate a shell script from trusted checks to be batch-executed in a single SSH call.
+    Each check: exit code 0 = pass. Output is lines of 'id<TAB>exitcode'.
 
-    helper_cmds が指定されていれば、先頭で `rhcsa_done <qid> '<cmd1>' ...` を実行して
-    /tmp/.rhcsa_<qid>_done を自動生成する（ユーザーが手で打たなくても採点できるように）。
+    If helper_cmds is given, `rhcsa_done <qid> '<cmd1>' ...` is run at the top to
+    auto-generate /tmp/.rhcsa_<qid>_done (so grading works even if the user did not run it by hand).
     """
     lines = ["#!/bin/bash"]
-    # ヘルパー自動実行（grader.checks の前に /tmp/.rhcsa_<qid>_done を作る）
+    # Auto-run the helper (create /tmp/.rhcsa_<qid>_done before grader.checks)
     if qid and helper_cmds:
         helper_parts = ["rhcsa_done", shlex.quote(qid)]
         for hc in helper_cmds:
             helper_parts.append(shlex.quote(hc))
-        # 失敗しても続行（helper 失敗時は helper_fresh check が落ちて原因が分かる）
+        # Continue even on failure (if the helper fails, the helper_fresh check fails and reveals the cause)
         lines.append("# auto-run helper for " + qid)
-        # </dev/null 必須: スクリプトは bash -s の stdin で流れてくるため、
-        # 中の ssh（${SSH_B} 等）が stdin を読むと残りの check 行を食って消す
+        # </dev/null is required: the script is fed via the stdin of bash -s, so if an
+        # ssh inside it (${SSH_B} etc.) reads stdin, it would consume and lose the remaining check lines
         lines.append(" ".join(helper_parts) + " </dev/null >/dev/null 2>&1 || true")
     for c in checks:
         cid = str(c.get("id", ""))
         cmd = expand_macros(c.get("cmd", ""), cfg)
-        # cid は信頼済みデータだが、念のためシェルクオート。cmd は信頼済み定義をそのまま実行。
+        # cid is trusted data, but shell-quote it just in case. cmd runs the trusted definition as-is.
         lines.append(
             "( " + cmd + " ) </dev/null >/dev/null 2>&1; "
             + "printf '%s\\t%s\\n' " + shlex.quote(cid) + ' "$?"')
@@ -223,10 +226,10 @@ def build_check_script(checks, cfg, qid=None, helper_cmds=None):
 
 
 def run_grade(cfg, checks, qid=None, helper_cmds=None):
-    """checks（phase で絞り済み）を VM 上でバッチ実行し、結果リストを返す。
-    qid と helper_cmds を渡すと、checks 実行前に `rhcsa_done <qid> ...` を先に流して
-    /tmp/.rhcsa_<qid>_done を自動生成する。
-    SSH 自体が失敗してパース結果が空のときは GradeError を送出する。"""
+    """Batch-execute checks (already filtered by phase) on the VM and return a result list.
+    If qid and helper_cmds are passed, `rhcsa_done <qid> ...` is run first before the checks
+    to auto-generate /tmp/.rhcsa_<qid>_done.
+    Raises GradeError when SSH itself fails and the parsed result is empty."""
     if not checks:
         return []
     script = build_check_script(checks, cfg, qid=qid, helper_cmds=helper_cmds)
@@ -238,7 +241,7 @@ def run_grade(cfg, checks, qid=None, helper_cmds=None):
             code = code.strip()
             parsed[cid] = int(code) if code.lstrip("-").isdigit() else -1
     if rc != 0 and not parsed:
-        # スクリプト自体が流せなかった（接続不可・鍵エラー等）
+        # The script itself could not be sent (unreachable, key error, etc.)
         raise GradeError(err.strip() or ("ssh exit %d" % rc))
     results = []
     for c in checks:
@@ -248,76 +251,76 @@ def run_grade(cfg, checks, qid=None, helper_cmds=None):
 
 
 # ---------------------------------------------------------------------------
-# AI チャット（Anthropic Claude）
+# AI chat (Anthropic Claude)
 # ---------------------------------------------------------------------------
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
 
 CHAT_SYSTEM_BASE = (
-    "あなたは RHEL 10 / RHCSA EX200 試験対策の優秀な家庭教師です。\n"
-    "受講者は実機 VM（ServerA = 192.0.2.10、ServerB = 192.0.2.11、\n"
-    "OS ディスク nvme0n1、追加ディスク nvme0n2/n3 各 8GB）で学習中です。\n"
-    "回答は日本語で、コマンドは ```bash``` で囲み、各オプションの意味も短く解説してください。\n"
-    "RHEL 10 (RHCSA EX200) で実際に使えるコマンドのみを示し、不確実な点は明示してください。"
+    "You are an excellent tutor for the RHEL 10 / RHCSA EX200 exam.\n"
+    "The student is learning on real VMs (ServerA = 192.0.2.10, ServerB = 192.0.2.11,\n"
+    "OS disk nvme0n1, additional disks nvme0n2/n3, 8GB each).\n"
+    "Answer in English, wrap commands in ```bash```, and briefly explain the meaning of each option.\n"
+    "Show only commands that actually work on RHEL 10 (RHCSA EX200), and clearly note any uncertainties."
 )
 
 CHAT_MODE_INSTRUCTIONS = {
     "hint": (
-        "【モード: ヒント】受講者は自力で解こうとしています。\n"
-        "・**模範解答コマンドそのものは出さない**。アプローチ・調べるべき man ページ・関連概念のヒントだけ。\n"
-        "・「次に何を試すべきか」を 1〜2 個示し、結果を見てさらに導く形で。"
+        "[Mode: Hint] The student is trying to solve it on their own.\n"
+        "- **Do not give out the model-answer command itself**. Only hint at the approach, the man pages to look up, and related concepts.\n"
+        "- Suggest 1-2 things to try next, then guide further after seeing the results."
     ),
     "explain": (
-        "【モード: 解説】受講者は理解を深めたい状態。\n"
-        "・コマンドの各オプション・引数・記号（`{}`、`\\;`、`-r` 等）を逐条解説。\n"
-        "・関連トピック（再起動後の永続性、SELinux、firewalld など）への波及も触れる。"
+        "[Mode: Explain] The student wants to deepen their understanding.\n"
+        "- Explain each option, argument, and symbol of the command (`{}`, `\\;`, `-r`, etc.) item by item.\n"
+        "- Also touch on knock-on effects to related topics (persistence after reboot, SELinux, firewalld, etc.)."
     ),
     "debug": (
-        "【モード: エラー診断】受講者がコマンドを実行してエラーが出た状態。\n"
-        "・受講者が貼ったエラーメッセージから根本原因を推定。\n"
-        "・確認すべきコマンド（`ls -Z`、`getenforce`、`systemctl status` 等）を提示。\n"
-        "・SELinux / firewalld / partprobe 忘れなど RHCSA で頻出のミスを優先的に疑う。"
+        "[Mode: Error Diagnosis] The student ran a command and got an error.\n"
+        "- Infer the root cause from the error message the student pasted.\n"
+        "- Suggest commands to check (`ls -Z`, `getenforce`, `systemctl status`, etc.).\n"
+        "- Prioritize suspecting common RHCSA mistakes such as SELinux / firewalld / forgetting partprobe."
     ),
 }
 
 
 def build_chat_system_prompt(qctx, mode):
-    """問題コンテキスト + モード別指示でシステムプロンプトを組み立てる。
-    qctx: load_question_contexts() の 1 エントリ。None なら問題なしモード。"""
+    """Assemble the system prompt from question context + mode-specific instructions.
+    qctx: a single entry from load_question_contexts(). None means no-question mode."""
     parts = [CHAT_SYSTEM_BASE]
     parts.append(CHAT_MODE_INSTRUCTIONS.get(mode, CHAT_MODE_INSTRUCTIONS["explain"]))
     if qctx:
         ctx_lines = []
-        ctx_lines.append("\n--- 受講者が今開いている問題 ---")
+        ctx_lines.append("\n--- The question the student currently has open ---")
         if qctx.get("test") and qctx.get("qno"):
             ctx_lines.append("ID: Test %s Q%s" % (qctx["test"], qctx["qno"]))
         if qctx.get("category"):
-            ctx_lines.append("カテゴリ: %s" % qctx["category"])
-        ctx_lines.append("タイトル: %s" % qctx.get("title", ""))
-        ctx_lines.append("問題文: %s" % qctx.get("prompt", ""))
+            ctx_lines.append("Category: %s" % qctx["category"])
+        ctx_lines.append("Title: %s" % qctx.get("title", ""))
+        ctx_lines.append("Question: %s" % qctx.get("prompt", ""))
         if qctx.get("lab"):
-            ctx_lines.append("ラボ環境:")
+            ctx_lines.append("Lab environment:")
             for line in qctx["lab"]:
                 ctx_lines.append("  - %s" % line)
-        # ヒントモードでは模範解答を伏せる
+        # In hint mode, hide the model answer
         if mode != "hint" and qctx.get("solutionText"):
-            ctx_lines.append("\n模範解答（参考、必要に応じて引用してよい）:")
+            ctx_lines.append("\nModel answer (for reference, quote as needed):")
             ctx_lines.append(qctx["solutionText"])
         if mode != "hint" and qctx.get("pitfalls"):
-            ctx_lines.append("\n落とし穴・試験のポイント:")
-            for p in qctx["pitfalls"][:6]:        # 長すぎないよう先頭 6 件
+            ctx_lines.append("\nPitfalls and exam tips:")
+            for p in qctx["pitfalls"][:6]:        # cap at the first 6 to avoid being too long
                 ctx_lines.append("  - %s" % p)
         parts.append("\n".join(ctx_lines))
     return "\n\n".join(parts)
 
 
 def anthropic_chat_stream(cfg, system, messages, write_chunk):
-    """Anthropic API を stream=true で呼び、text_delta だけを write_chunk(text) で渡す。
-    write_chunk は SSE フォーマットへ整形してブラウザに送る役目。
-    例外時は最後に write_chunk("[ERROR] ...") を呼んで終了。"""
+    """Call the Anthropic API with stream=true and pass only text_delta to write_chunk(text).
+    write_chunk is responsible for formatting into SSE format and sending to the browser.
+    On exception, call write_chunk("[ERROR] ...") at the end and finish."""
     api_key = cfg.get("anthropic_api_key")
     if not api_key:
-        write_chunk("[ERROR] anthropic_api_key が vmbridge.config.json に未設定です。")
+        write_chunk("[ERROR] anthropic_api_key is not set in vmbridge.config.json.")
         return
     body = json.dumps({
         "model": cfg.get("anthropic_model", "claude-haiku-4-5"),
@@ -344,9 +347,9 @@ def anthropic_chat_stream(cfg, system, messages, write_chunk):
             for raw in resp:
                 line = raw.decode("utf-8", errors="replace")
                 buf += line
-                # SSE は空行で 1 イベント区切り
+                # In SSE, a blank line delimits one event
                 if "\n\n" in buf or buf.endswith("\n"):
-                    # 1 行ずつ処理（buf が大きくなりすぎないよう逐次解析）
+                    # Process one line at a time (parse incrementally so buf does not grow too large)
                     pass
                 if line.startswith("data: "):
                     try:
@@ -372,7 +375,7 @@ def anthropic_chat_stream(cfg, system, messages, write_chunk):
 
 
 # ---------------------------------------------------------------------------
-# HTTP ハンドラ
+# HTTP handler
 # ---------------------------------------------------------------------------
 class BridgeHandler(BaseHTTPRequestHandler):
     server_version = "rhcsa-vmbridge/1.0"
@@ -381,7 +384,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
     def _origin_allowed(self):
         origin = self.headers.get("Origin")
         if origin is None:
-            return True, None          # 非ブラウザ（curl 等）。ローカルツール扱いで許可
+            return True, None          # non-browser (curl, etc.). Allowed as a local tool
         if origin in ALLOWED_ORIGINS:
             return True, origin
         return False, origin
@@ -426,7 +429,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 "vm": "reachable" if st.get("ok") else "unreachable",
                 "hostname": st.get("hostname", ""),
                 "error": st.get("error", ""),
-                "token": TOKEN,             # 正当な Origin のみレスポンスを読める（CORS）
+                "token": TOKEN,             # only a valid Origin can read the response (CORS)
                 "chat": bool(CONFIG and CONFIG.get("anthropic_api_key")),
                 "chatModel": (CONFIG.get("anthropic_model") if CONFIG else ""),
             }
@@ -449,7 +452,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"error": "not found"}, origin)
 
     def _read_json_body(self, origin, max_size=4096):
-        """共通：token 検証 + JSON ボディ読込。失敗時は HTTP レスポンスを返して None を返す。"""
+        """Common: token validation + reading the JSON body. On failure, returns an HTTP response and returns None."""
         if self.headers.get("X-RHCSA-Bridge-Token") != TOKEN:
             self._send_json(403, {"error": "invalid bridge token"}, origin)
             return None
@@ -480,57 +483,57 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": "phase must be live or reboot"}, origin)
             return
         if CONFIG is None:
-            self._send_json(503, {"error": "VM 未設定（vmbridge.config.json）"}, origin)
+            self._send_json(503, {"error": "VM not configured (vmbridge.config.json)"}, origin)
             return
         grader = GRADERS[qid]
         checks = [c for c in grader["checks"] if c.get("scope", "live") == phase]
-        # helperCmds は live phase でのみ自動実行（reboot phase は再起動後の永続確認なので
-        # その場の helper 生成は意味がない）。
-        # auto_helper=false（POST body）で OFF にできる。grader_audit の clean モード採点で
-        # 「helper 自動実行による false positive」を排除するために使う。
+        # helperCmds are auto-run only in the live phase (the reboot phase verifies persistence
+        # after reboot, so generating a helper on the spot is meaningless there).
+        # Can be turned OFF with auto_helper=false (POST body). Used in grader_audit's clean-mode
+        # grading to eliminate "false positives caused by auto-running the helper".
         auto_helper = req.get("auto_helper", True)
         helper_cmds = (grader.get("helperCmds")
                        if (phase == "live" and auto_helper) else None)
         try:
             results = run_grade(CONFIG, checks, qid=qid, helper_cmds=helper_cmds)
         except GradeError as e:
-            self._send_json(502, {"error": "VM 実行エラー: " + str(e)}, origin)
+            self._send_json(502, {"error": "VM execution error: " + str(e)}, origin)
             return
         self._send_json(200, {"questionId": qid, "phase": phase,
                               "results": results}, origin)
 
     def _handle_chat(self, origin):
-        # チャット履歴は最大 32KB まで
+        # Chat history is capped at 32KB
         req = self._read_json_body(origin, max_size=32768)
         if req is None:
             return
         if CONFIG is None or not CONFIG.get("anthropic_api_key"):
-            self._send_json(503, {"error": "AI チャット未設定（vmbridge.config.json の anthropic_api_key）"}, origin)
+            self._send_json(503, {"error": "AI chat not configured (anthropic_api_key in vmbridge.config.json)"}, origin)
             return
         qid = req.get("questionId")
         mode = req.get("mode", "explain")
         if mode not in CHAT_MODE_INSTRUCTIONS:
-            self._send_json(400, {"error": "mode は hint/explain/debug のいずれか"}, origin)
+            self._send_json(400, {"error": "mode must be one of hint/explain/debug"}, origin)
             return
         messages = req.get("messages") or []
         if not isinstance(messages, list) or not messages:
-            self._send_json(400, {"error": "messages 配列が空"}, origin)
+            self._send_json(400, {"error": "messages array is empty"}, origin)
             return
-        # 各 message を { role: user|assistant, content: str } のみに正規化（信頼済みの形だけ通す）
+        # Normalize each message to only { role: user|assistant, content: str } (allow only the trusted shape)
         clean_msgs = []
-        for m in messages[-20:]:                    # 最大 20 turn
+        for m in messages[-20:]:                    # up to 20 turns
             role = m.get("role")
             content = m.get("content")
             if role in ("user", "assistant") and isinstance(content, str) and content.strip():
-                clean_msgs.append({"role": role, "content": content[:8000]})  # 1 メッセージ 8KB 上限
+                clean_msgs.append({"role": role, "content": content[:8000]})  # 8KB cap per message
         if not clean_msgs:
-            self._send_json(400, {"error": "有効な messages がない"}, origin)
+            self._send_json(400, {"error": "no valid messages"}, origin)
             return
-        # 問題コンテキスト（信頼済み）を解決
+        # Resolve the question context (trusted)
         qctx = QCONTEXTS.get(qid) if isinstance(qid, str) else None
         system = build_chat_system_prompt(qctx, mode)
 
-        # SSE ストリーミングレスポンスを開始
+        # Start the SSE streaming response
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
@@ -550,7 +553,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 pass
 
         anthropic_chat_stream(CONFIG, system, clean_msgs, write_chunk)
-        # 完了マーカー
+        # Completion marker
         try:
             self.wfile.write(b"event: done\ndata: {}\n\n")
             self.wfile.flush()
@@ -558,15 +561,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
             pass
 
     def log_message(self, fmt, *args):
-        # /status はアプリが 20 秒ごとに叩くヘルスチェック。ログが流れて
-        # 実際の採点ログが埋もれるため抑制する（全て見たい場合は下を消す）。
+        # /status is a health check the app hits every 20 seconds. Suppress it so the log
+        # does not get flooded and bury the actual grading logs (delete the lines below if you want to see all).
         if args and isinstance(args[0], str) and "/status" in args[0]:
             return
         sys.stderr.write("[vmbridge] " + (fmt % args) + "\n")
 
 
 # ---------------------------------------------------------------------------
-# 起動
+# Startup
 # ---------------------------------------------------------------------------
 CONFIG, CONFIG_ERR = load_config()
 GRADERS = load_graders()
@@ -577,34 +580,34 @@ BRIDGE_PORT = (CONFIG.get("bridge_port") if CONFIG else 8770)
 
 def main():
     print("=" * 60)
-    print(" RHCSA10 exam practice — SSH ブリッジ (vmbridge.py)")
+    print(" RHCSA10 exam practice — SSH bridge (vmbridge.py)")
     print("=" * 60)
     if CONFIG is None:
-        print(" [設定なし] %s" % CONFIG_ERR)
-        print("  → /status は ok:false を返します。設定後に再起動してください。")
+        print(" [no config] %s" % CONFIG_ERR)
+        print("  -> /status returns ok:false. Configure it and restart.")
     else:
-        print(" VM      : %s@%s:%s (鍵 %s)" % (
+        print(" VM      : %s@%s:%s (key %s)" % (
             CONFIG["ssh_user"], CONFIG["ssh_host"],
             CONFIG["ssh_port"], CONFIG["ssh_key"]))
-    print(" 待受    : http://127.0.0.1:%d  (127.0.0.1 のみ)" % BRIDGE_PORT)
-    print(" 許可Origin: %s" % ", ".join(ALLOWED_ORIGINS))
-    print(" grader  : %d 問の信頼済み定義を読み込み済み" % len(GRADERS))
-    print(" qcontext: %d 問の問題コンテキスト（AI チャット用）" % len(QCONTEXTS))
+    print(" Listening: http://127.0.0.1:%d  (127.0.0.1 only)" % BRIDGE_PORT)
+    print(" Allowed Origins: %s" % ", ".join(ALLOWED_ORIGINS))
+    print(" grader  : loaded %d trusted question definitions" % len(GRADERS))
+    print(" qcontext: %d question contexts (for AI chat)" % len(QCONTEXTS))
     chat_on = bool(CONFIG and CONFIG.get("anthropic_api_key"))
     print(" AI chat : %s (model=%s)" % (
-        "有効" if chat_on else "無効（anthropic_api_key 未設定）",
+        "enabled" if chat_on else "disabled (anthropic_api_key not set)",
         (CONFIG.get("anthropic_model") if CONFIG else "")))
     print(" token   : %s" % TOKEN)
-    print(" 停止    : Ctrl+C")
+    print(" Stop    : Ctrl+C")
     print("=" * 60)
     httpd = ThreadingHTTPServer(("127.0.0.1", BRIDGE_PORT), BridgeHandler)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n停止します。")
+        print("\nStopping.")
     finally:
         httpd.server_close()
-        # SSH マスター接続を閉じる
+        # Close the SSH master connection
         if CONFIG is not None:
             subprocess.run(ssh_base(CONFIG)[:-1] + ["-O", "exit",
                            "%s@%s" % (CONFIG["ssh_user"], CONFIG["ssh_host"])],

@@ -1,21 +1,21 @@
-/* bridge.js — SSH ブリッジ・クライアント
-   vmbridge.py (http://127.0.0.1:8770) と通信し、VM の到達確認と実物採点を行う。
-   ブリッジ未起動・VM 未到達のときは connected=false となり、UI は自己採点にフォールバックする。 */
+/* bridge.js — SSH bridge client
+   Communicates with vmbridge.py (http://127.0.0.1:8770) to check VM reachability and perform live grading.
+   When the bridge is not running or the VM is unreachable, connected=false and the UI falls back to self-grading. */
 (function (global) {
   "use strict";
 
-  // ベース URL は index.html で `window.RHCSA_BRIDGE_BASE = "http://127.0.0.1:NNNN"`
-  // を定義することで上書き可能。デフォルトは vmbridge.config.example.json と同じ 8770。
+  // The base URL can be overridden by defining `window.RHCSA_BRIDGE_BASE = "http://127.0.0.1:NNNN"`
+  // in index.html. The default is 8770, the same as in vmbridge.config.example.json.
   var BASE = (typeof global.RHCSA_BRIDGE_BASE === "string"
     && global.RHCSA_BRIDGE_BASE) || "http://127.0.0.1:8770";
 
   var Bridge = {
-    bridgeUp: false,    // vmbridge.py に到達できたか
-    connected: false,   // さらに VM(SSH) にも到達できたか
+    bridgeUp: false,    // whether vmbridge.py was reachable
+    connected: false,   // whether the VM (SSH) was also reachable
     token: null,
     info: null,
 
-    /* /status を叩いて状態を更新。常に resolve する（失敗時も例外を投げない）。 */
+    /* Calls /status to refresh the state. Always resolves (never throws, even on failure). */
     checkStatus: function () {
       return fetch(BASE + "/status", { method: "GET" })
         .then(function (r) { return r.json(); })
@@ -35,8 +35,8 @@
         });
     },
 
-    /* 1問を実物採点する。phase = "live" | "reboot"。
-       戻り値: Promise<{ questionId, phase, results:[{id,exitCode}] }>。失敗時は reject。 */
+    /* Performs live grading for a single question. phase = "live" | "reboot".
+       Returns: Promise<{ questionId, phase, results:[{id,exitCode}] }>. Rejects on failure. */
     grade: function (questionId, phase) {
       return fetch(BASE + "/grade", {
         method: "POST",

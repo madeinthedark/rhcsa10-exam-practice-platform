@@ -1,13 +1,14 @@
-/* grader.js — スコア集計
-   ブリッジが返した check 別の exitCode を、問題の grader 定義（questions.js 由来）と
-   突き合わせて perCheck / earned / max を算出する。終了コード 0 = 合格。 */
+/* grader.js — score aggregation
+   Takes the per-check exitCode returned by the bridge, matches it against the
+   question's grader definition (from questions.js), and computes perCheck / earned / max.
+   Exit code 0 = pass. */
 (function (global) {
   "use strict";
 
   var Grader = {
-    /* question: QUESTIONS の1件
+    /* question: a single entry from QUESTIONS
        bridgeResult: { questionId, phase, results:[{id,exitCode}] }
-       戻り値: { phase, perCheck:[{id,label,scope,passed,score,earned,exitCode}], earned, max } */
+       return value: { phase, perCheck:[{id,label,scope,passed,score,earned,exitCode}], earned, max } */
     score: function (question, bridgeResult) {
       var phase = (bridgeResult && bridgeResult.phase) || "live";
       var checks = (question.grader && question.grader.checks) || [];
@@ -18,7 +19,7 @@
       var perCheck = [];
       var earned = 0, max = 0;
       checks.forEach(function (c) {
-        if (c.scope !== phase) return;          // 要求 phase の check のみ集計
+        if (c.scope !== phase) return;          // only aggregate checks for the requested phase
         var res = byId[c.id];
         var passed = !!res && res.exitCode === 0;
         var sc = (typeof c.score === "number") ? c.score : 0;
@@ -33,7 +34,7 @@
       return { phase: phase, perCheck: perCheck, earned: earned, max: max };
     },
 
-    /* この問題に reboot scope の check があるか */
+    /* Whether this question has any reboot-scope checks */
     hasRebootChecks: function (question) {
       var checks = (question.grader && question.grader.checks) || [];
       return checks.some(function (c) { return c.scope === "reboot"; });

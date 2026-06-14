@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
-# rhcsa_done — RHCSA10 学習アプリ採点補助コマンド
-# VM (ServerA / ServerB) の /usr/local/bin/rhcsa_done に配置する。
+# rhcsa_done — RHCSA10 learning app grading-helper command
+# Install at /usr/local/bin/rhcsa_done on the VMs (ServerA / ServerB).
 #
-# 学習者は問題完了後にこの関数を 1 行呼ぶだけで、grader が必要な状態情報を
-# /tmp/.rhcsa_<qid>_done に記録できる。grader はその出力ファイルを grep する。
+# After completing a question, the learner only needs to call this function once,
+# and the grader can record the required state information in
+# /tmp/.rhcsa_<qid>_done. The grader greps that output file.
 #
-# 使い方:
+# Usage:
 #   rhcsa_done <qid> [<cmd1> [<cmd2> ...]]
 #
-# 例:
+# Example:
 #   rhcsa_done t1q22 'ps -eo pid,ni,comm | grep sleep' 'history | tail -20'
 #
-# 出力先: /tmp/.rhcsa_<qid>_done
-# 既存ファイルは上書きされる (再採点用)
+# Output path: /tmp/.rhcsa_<qid>_done
+# An existing file is overwritten (for re-grading)
 #
-# セキュリティ:
-#   - qid は ^t[0-9]+q[0-9]+$ のみ受け入れる (任意ファイル書き込み防止)
-#   - 出力先は /tmp/ 固定 (snapshot revert で自動消去される)
-#   - cmd は eval される (学習用ツールなので意図的に許容)
+# Security:
+#   - qid only accepts ^t[0-9]+q[0-9]+$ (prevents arbitrary file writes)
+#   - Output path is fixed to /tmp/ (auto-removed on snapshot revert)
+#   - cmd is eval'd (intentionally allowed since this is a learning tool)
 
 set -u
 
@@ -25,9 +26,9 @@ rhcsa_done() {
   local qid="${1:-}"
   shift || true
 
-  # qid 形式検証
+  # Validate qid format
   if [[ ! "${qid}" =~ ^t[0-9]+q[0-9]+$ ]]; then
-    echo "Error: qid は 't<test>q<no>' 形式で指定 (例: t1q22)" >&2
+    echo "Error: specify qid in 't<test>q<no>' format (example: t1q22)" >&2
     return 1
   fi
 
@@ -49,14 +50,14 @@ rhcsa_done() {
     fi
   } > "${outfile}" 2>/dev/null
 
-  # 採点補助ファイルは誰でも読めるように (vmbridge は root で SSH するが念のため)
+  # Make the grading-helper file world-readable (vmbridge SSHes as root, but just in case)
   chmod 644 "${outfile}" 2>/dev/null || true
 
-  echo "✓ 採点補助ファイル: ${outfile}"
+  echo "✓ grading-helper file: ${outfile}"
 }
 
-# このファイルを source した場合は関数定義のみ
-# 直接実行された場合は引数を rhcsa_done に渡す
+# When this file is sourced, only define the function
+# When executed directly, pass the arguments to rhcsa_done
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   rhcsa_done "$@"
 fi

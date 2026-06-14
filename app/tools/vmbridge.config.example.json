@@ -1,17 +1,17 @@
 {
-  "_comment": "このファイルを vmbridge.config.json にコピーして、自分の RHEL 10 VM の情報に書き換えてください。vmbridge.config.json は .gitignore 済みです。",
+  "_comment": "Copy this file to vmbridge.config.json and replace the values with your own RHEL 10 VM information. vmbridge.config.json is already in .gitignore.",
   "ssh_host": "192.168.x.x",
   "ssh_user": "root",
   "ssh_key": "~/.ssh/rhcsa_vm",
   "ssh_port": 22,
   "bridge_port": 8770,
   "allowed_origins": ["http://localhost:8765", "http://127.0.0.1:8765"],
-  "_serverb_ssh_comment": "supplementary exam set で ServerB を判定するときに ServerA 上で発射するコマンド。grader.checks の cmd 中の ${SSH_B} がこの値に展開される。デフォルトは ssh root@server2（ServerA の /etc/hosts に server2 が解決できることが前提）。",
+  "_serverb_ssh_comment": "The command launched on ServerA when grading ServerB in the supplementary exam set. ${SSH_B} in grader.checks cmd entries is expanded to this value. The default is ssh root@server2 (this assumes that ServerA's /etc/hosts can resolve server2).",
   "serverb_ssh": "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@server2",
-  "_chat_comment": "AI 質問チャット（任意）。anthropic_api_key を設定すると問題画面の右側に AI 家庭教師チャットが有効化される。空文字列のままなら /chat は 503 を返し、UI 側もチャットを表示しない。",
+  "_chat_comment": "AI question chat (optional). Setting anthropic_api_key enables the AI tutor chat on the right side of the question screen. If left as an empty string, /chat returns 503 and the UI does not display the chat.",
   "anthropic_api_key": "",
   "anthropic_model": "claude-haiku-4-5",
-  "_future": "vmx_path / snapshot_name は MVP 後の /reset・/reboot 用（現状は未使用）",
+  "_future": "vmx_path / snapshot_name are for the post-MVP /reset and /reboot endpoints (currently unused).",
   "vmx_path": "",
   "snapshot_name": "clean"
 }

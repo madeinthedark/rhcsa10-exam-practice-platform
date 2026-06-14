@@ -1,8 +1,8 @@
-/* progress.js — localStorage 進捗ストア
-   自己採点 (correct/partial/wrong) と模擬試験結果 (recordExam) を保存。
-   模擬試験は VM 一括採点モードのときも同じ recordExam に格納され、
-   results[].source ("vm-auto"/"vm-error"/"self") と results[].vmGrade で
-   採点ソースを区別できる。 */
+/* progress.js — localStorage progress store
+   Stores self-grading (correct/partial/wrong) and mock exam results (recordExam).
+   Mock exams are also stored via the same recordExam even in VM batch-grading mode;
+   results[].source ("vm-auto"/"vm-error"/"self") and results[].vmGrade allow
+   distinguishing the grading source. */
 (function (global) {
   "use strict";
 
@@ -11,7 +11,7 @@
   var DEFAULT = {
     version: 1,
     questions: {},   // qid -> { selfGrade, reviewedAt, attemptCount }
-    log: [],         // [{ qid, selfGrade, ctx, at }] 追記型
+    log: [],         // [{ qid, selfGrade, ctx, at }] append-only
     exams: []        // [{ examId, name, startedAt, submittedAt, durationSec,
                      //    totalScore, score, passed, results:[{qid,selfGrade,points,earned}] }]
   };
@@ -39,12 +39,12 @@
     try {
       global.localStorage.setItem(KEY, JSON.stringify(state));
     } catch (e) {
-      console.warn("localStorage 保存に失敗:", e);
+      console.warn("Failed to save to localStorage:", e);
     }
   }
 
   var Progress = {
-    /* 1問の自己採点を記録 */
+    /* Record the self-grade for a single question */
     recordQuestion: function (qid, selfGrade, ctx) {
       var now = new Date().toISOString();
       var q = state.questions[qid] || { attemptCount: 0 };
@@ -61,7 +61,7 @@
       return state.questions[qid] || null;
     },
 
-    /* 自動採点(VM ブリッジ)の結果を記録。phase("live"/"reboot") ごとに保存する。 */
+    /* Record the result of automatic grading (VM bridge). Stored per phase ("live"/"reboot"). */
     recordAutoGrade: function (qid, result) {
       var now = new Date().toISOString();
       var q = state.questions[qid] || { attemptCount: 0 };
@@ -74,9 +74,9 @@
       persist();
     },
 
-    /* VM 採点 + selfGrade への自動反映（復習・正答率に反映するため）。
-       手動で付けた selfGrade（selfGradeSource !== "vm-auto"）は尊重して
-       上書きしない。VM 由来の古い評価は再採点で上書きできる。 */
+    /* VM grading + automatic reflection into selfGrade (so it shows in review and accuracy).
+       A manually assigned selfGrade (selfGradeSource !== "vm-auto") is respected and
+       not overwritten. A stale VM-derived grade can be overwritten by re-grading. */
     recordAutoGradeAndSync: function (qid, scored, opts) {
       this.recordAutoGrade(qid, scored);
       var q = state.questions[qid] || { attemptCount: 0 };
@@ -100,7 +100,7 @@
       persist();
     },
 
-    /* 模擬試験の結果を記録 */
+    /* Record a mock exam result */
     recordExam: function (rec) {
       state.exams.push(rec);
       if (state.exams.length > 100) state.exams = state.exams.slice(-100);
@@ -109,7 +109,7 @@
 
     getExams: function () { return state.exams.slice(); },
 
-    /* 全体統計 */
+    /* Overall statistics */
     stats: function (allQuestions) {
       var attempted = 0, correct = 0, partial = 0, wrong = 0;
       for (var qid in state.questions) {
@@ -131,7 +131,7 @@
       };
     },
 
-    /* カテゴリ別統計 { slug: {attempted, correct, partial, wrong, total} } */
+    /* Per-category statistics { slug: {attempted, correct, partial, wrong, total} } */
     categoryStats: function (allQuestions) {
       var out = {};
       allQuestions.forEach(function (q) {
@@ -146,7 +146,7 @@
       return out;
     },
 
-    /* 間違えた問題 (最新の自己採点が wrong) の qid 配列 */
+    /* Array of qids for incorrectly answered questions (latest self-grade is wrong) */
     wrongList: function () {
       var out = [];
       for (var qid in state.questions) {
@@ -156,7 +156,7 @@
       return out;
     },
 
-    /* 部分点 (partial) の qid 配列 */
+    /* Array of qids with partial credit (partial) */
     partialList: function () {
       var out = [];
       for (var qid in state.questions) {
@@ -166,7 +166,7 @@
       return out;
     },
 
-    /* 未着手 (記録が無い) 問題の qid 配列。既定で legacy を除外する。 */
+    /* Array of qids for not-yet-started questions (no record). Excludes legacy by default. */
     untouchedList: function (allQuestions, opts) {
       opts = opts || {};
       var includeLegacy = !!opts.includeLegacy;
@@ -179,7 +179,7 @@
       return out;
     },
 
-    /* VM 採点（live phase）を実施したことのある問題数 */
+    /* Number of questions that have undergone VM grading (live phase) */
     vmGradedCount: function () {
       var n = 0;
       for (var qid in state.questions) {
@@ -190,7 +190,7 @@
       return n;
     },
 
-    /* 公式範囲（legacy=false）に絞った合格準備サマリ。
+    /* Exam-readiness summary limited to the official scope (legacy=false).
        score = (correct + partial * 0.5) / official_total * 100 */
     officialSummary: function (allQuestions) {
       var official = (allQuestions || []).filter(function (q) { return !q.legacy; });
@@ -213,7 +213,7 @@
       };
     },
 
-    /* 模擬試験の最高得点 (試験 ID ごと) と全体最高 */
+    /* Best mock exam score (per exam ID) and overall best */
     examBest: function () {
       var byId = {};
       var overall = null;
@@ -226,19 +226,19 @@
       return { byId: byId, overall: overall, count: state.exams.length };
     },
 
-    /* 全消去 */
+    /* Clear everything */
     reset: function () {
       state = clone(DEFAULT);
       persist();
     },
 
-    /* 1問の記録をクリア (リセットボタン用) */
+    /* Clear the record for a single question (for the reset button) */
     clearQuestion: function (qid) {
       delete state.questions[qid];
       persist();
     },
 
-    /* 高精度採点(Class A)で VM 実物採点まで完了した問題数 */
+    /* Number of questions completed through actual VM grading via high-precision grading (Class A) */
     highPrecisionCompleted: function (allQuestions) {
       var qmap = {};
       (allQuestions || []).forEach(function (q) { qmap[q.id] = q; });
@@ -253,7 +253,7 @@
       return { done: done, total: total };
     },
 
-    /* 当日(ローカル日付)の学習量 — 採点ログ件数 */
+    /* Today's study volume (local date) — number of grading log entries */
     todayCompleted: function () {
       var today = localDateKey(new Date());
       var qids = {};
@@ -264,7 +264,7 @@
       return Object.keys(qids).length;
     },
 
-    /* 連続学習 streak — 直近何日連続で 1 問以上記録があるか */
+    /* Study streak — how many consecutive recent days have at least one recorded question */
     streak: function () {
       var dates = {};
       state.log.forEach(function (e) {
@@ -272,7 +272,7 @@
       });
       var d = new Date();
       var n = 0;
-      // 今日に記録がなければ昨日から数える（朝に減らないよう猶予）
+      // If there is no record for today, start counting from yesterday (grace so it doesn't drop in the morning)
       if (!dates[localDateKey(d)]) {
         d.setDate(d.getDate() - 1);
       }
@@ -283,7 +283,7 @@
       return n;
     },
 
-    /* カテゴリ別の到達ランク(Bronze/Silver/Gold/ExamReady) と進捗 */
+    /* Per-category achievement rank (Bronze/Silver/Gold/ExamReady) and progress */
     categoryRanks: function (allQuestions) {
       var byCat = {};
       (allQuestions || []).forEach(function (q) {
@@ -312,7 +312,7 @@
       return out;
     },
 
-    /* 同カテゴリで × か △ な問題の qid 配列（次アクション用） */
+    /* Array of qids in the same category graded wrong or partial (for the next-action feature) */
     weakInCategory: function (slug, allQuestions, excludeQid) {
       var out = [];
       (allQuestions || []).forEach(function (q) {
@@ -326,7 +326,7 @@
       return out;
     },
 
-    /* 公開: 最近の log（テスト用） */
+    /* Exposed: recent log (for testing) */
     _state: function () { return state; }
   };
 

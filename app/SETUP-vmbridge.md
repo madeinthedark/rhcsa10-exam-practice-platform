@@ -1,64 +1,64 @@
-# SSH ブリッジ セットアップ手順（VM 実物採点）
+# SSH Bridge Setup Guide (Live VM Grading)
 
-このアプリは、実機の RHEL 10 VM に SSH 接続して「課題が正しくできているか」を
-自動採点できます。そのための中継プログラム `vmbridge.py` をセットアップします。
+This app can connect to a real RHEL 10 VM over SSH and automatically grade whether
+a task has been completed correctly. To enable this, you set up the relay program `vmbridge.py`.
 
 ```
-ブラウザ(Mac, :8765) ──HTTP──▶ vmbridge.py(Mac, :8770) ──SSH──▶ RHEL 10 VM
+Browser (Mac, :8765) ──HTTP──▶ vmbridge.py (Mac, :8770) ──SSH──▶ RHEL 10 VM
 ```
 
-ブリッジを起動しなくてもアプリ自体（閲覧・自己採点）は動きます。SSH ブリッジは
-「VMで採点」ボタンを使いたいときだけ必要です。
+The app itself (browsing and self-grading) works even without the bridge running. The SSH bridge
+is only required when you want to use the "Grade on VM" button.
 
 ---
 
-## 前提
+## Prerequisites
 
-- VMware Fusion 等に **RHEL 10 の VM** が用意済みで、起動している
-- VM 内で **sshd が稼働**している（RHCSA 環境なら通常そのまま動いています）
-- VM の IP アドレスが分かる（VM 内で `ip addr` または `hostname -I` で確認）
+- A **RHEL 10 VM** is already set up in VMware Fusion (or similar) and is running
+- **sshd is running** inside the VM (in a typical RHCSA environment it runs out of the box)
+- You know the VM's IP address (check it inside the VM with `ip addr` or `hostname -I`)
 
 ---
 
-## 手順
+## Steps
 
-### 1. SSH 鍵を作る（Mac 側・初回のみ）
+### 1. Create an SSH key (on the Mac, first time only)
 
-パスワードを設定ファイルに書かずに済むよう、鍵認証を使います。
+To avoid writing a password in the config file, we use key-based authentication.
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/rhcsa_vm -N ""
 ```
 
-### 2. 公開鍵を VM に登録する
+### 2. Register the public key on the VM
 
 ```bash
-ssh-copy-id -i ~/.ssh/rhcsa_vm.pub root@<VMのIP>
+ssh-copy-id -i ~/.ssh/rhcsa_vm.pub root@<VM_IP>
 ```
 
-`ssh-copy-id` が無い場合は、`~/.ssh/rhcsa_vm.pub` の内容を VM の
-`~/.ssh/authorized_keys` に追記してください。
+If `ssh-copy-id` is not available, append the contents of `~/.ssh/rhcsa_vm.pub` to the VM's
+`~/.ssh/authorized_keys`.
 
-登録できたら、パスワードなしで入れることを確認します:
+Once registered, verify that you can log in without a password:
 
 ```bash
-ssh -i ~/.ssh/rhcsa_vm root@<VMのIP> hostname
+ssh -i ~/.ssh/rhcsa_vm root@<VM_IP> hostname
 ```
 
-### 3. ブリッジの設定ファイルを作る
+### 3. Create the bridge config file
 
-`app/tools/` で、テンプレートをコピーして編集します:
+In `app/tools/`, copy the template and edit it:
 
 ```bash
 cd app/tools
 cp vmbridge.config.example.json vmbridge.config.json
 ```
 
-`vmbridge.config.json` を開き、自分の VM に合わせて書き換えます:
+Open `vmbridge.config.json` and edit it to match your VM:
 
 ```json
 {
-  "ssh_host": "192.168.x.x",       ← VM の IP
+  "ssh_host": "192.168.x.x",       ← VM IP
   "ssh_user": "root",
   "ssh_key": "~/.ssh/rhcsa_vm",
   "ssh_port": 22,
@@ -66,57 +66,57 @@ cp vmbridge.config.example.json vmbridge.config.json
 }
 ```
 
-> `vmbridge.config.json` は `.gitignore` 済みです（秘密情報なのでコミットされません）。
+> `vmbridge.config.json` is already in `.gitignore` (it is not committed, since it contains secrets).
 
-### 4. ブリッジを起動する
+### 4. Start the bridge
 
 ```bash
 python3 app/tools/vmbridge.py
 ```
 
-`VM接続` 等の情報と `token` が表示され、待ち受け状態になります。
-このターミナルは開いたままにしておきます。
+Information such as `VM connection` and a `token` is displayed, and the bridge starts listening.
+Leave this terminal open.
 
-### 5. アプリを開く
+### 5. Open the app
 
-別のターミナルでアプリのサーバを起動し（未起動の場合）:
+In a separate terminal, start the app server (if it is not already running):
 
 ```bash
 python3 -m http.server 8765 --directory app
 ```
 
-ブラウザで **http://localhost:8765/index.html** を開きます。
-画面右上のインジケータが **「● VM接続」（緑）** になれば成功です。
+Open **http://localhost:8765/index.html** in your browser.
+You have succeeded when the indicator in the top-right corner turns to **"● VM connected" (green)**.
 
 ---
 
-## 使い方
+## Usage
 
-1. 問題画面を開き、まず **VM で実際に課題を実施**します
-2. **「VMで採点」** ボタンを押すと、ブリッジ経由で VM の状態が check 別に採点されます
-3. 再起動後の永続性チェックがある問題（例: LVM）は、**VM を再起動してから**
-   「VM 再起動後チェックを実行」ボタンを押します
+1. Open a problem screen and first **actually perform the task on the VM**
+2. Press the **"Grade on VM"** button to grade the VM's state check by check via the bridge
+3. For problems that include a post-reboot persistence check (e.g., LVM), **reboot the VM first**,
+   then press the "Run post-reboot check" button
 
 ---
 
-## トラブルシュート
+## Troubleshooting
 
-| インジケータ | 状態 | 対処 |
+| Indicator | State | What to do |
 |---|---|---|
-| ● VM未接続（灰） | `vmbridge.py` が起動していない／到達できない | ブリッジを起動。`bridge_port` が他と衝突していないか確認 |
-| ● VM未到達（橙） | ブリッジは起動中だが VM に SSH できない | VM が起動しているか、IP・鍵パス・sshd 稼働を確認。`ssh -i <鍵> <user>@<IP> hostname` が通るか手動確認 |
-| ● VM接続（緑） | 正常 | そのまま「VMで採点」が使えます |
+| ● VM not connected (gray) | `vmbridge.py` is not running / not reachable | Start the bridge. Check that `bridge_port` does not conflict with another port |
+| ● VM unreachable (orange) | The bridge is running but cannot SSH to the VM | Check that the VM is running and verify the IP, key path, and that sshd is running. Manually confirm that `ssh -i <key> <user>@<IP> hostname` succeeds |
+| ● VM connected (green) | Normal | You can use "Grade on VM" as-is |
 
-- `file://` で開いた場合は自動採点は使えません（ブラウザのセキュリティ制約）。
-  必ず `http://localhost:8765` で開いてください。自己採点は `file://` でも動きます。
+- Automatic grading is not available when opened via `file://` (a browser security restriction).
+  Always open it via `http://localhost:8765`. Self-grading works even via `file://`.
 
 ---
 
-## セキュリティについて
+## About Security
 
-- `vmbridge.py` は **127.0.0.1 のみ**で待ち受け、外部公開しません
-- ブラウザは **問題 ID のみ**を送信し、実行コマンドはブリッジ側の信頼済み定義
-  （`manual_overrides.json` の `grader`）から解決されます。ブラウザから任意の
-  コマンドは実行できません
-- 採点コマンドは原則 **read-only**（状態を変えない確認コマンド）です
-- 起動時のランダム token と Origin 検証で、他サイトからの呼び出しを防ぎます
+- `vmbridge.py` listens on **127.0.0.1 only** and is not exposed externally
+- The browser sends **only the problem ID**; the commands to run are resolved from the trusted
+  definitions on the bridge side (the `grader` field in `manual_overrides.json`). Arbitrary
+  commands cannot be run from the browser
+- Grading commands are, as a rule, **read-only** (verification commands that do not change state)
+- A random token generated at startup and Origin validation prevent calls from other sites
