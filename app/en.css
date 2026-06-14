@@ -1,0 +1,32 @@
+/* en.css — English Edition. The English app reuses ../styles.css and all its
+   classes (.dash-box .cat-stat .qcard .mode-toggle .action-bar .crumbs .toolbar
+   .filter-chips .qlist .qrow .spec-list .pitfalls .autograde-result .btn ...),
+   so the layout matches the Japanese edition. This file only:
+   1) swaps the UI font to a readable English system stack (code font unchanged),
+   2) adds the language switch + a couple of helpers. */
+
+:root {
+  /* Readable English sans stack. On macOS this resolves to San Francisco. */
+  --sans: -apple-system, "SF Pro Text", "Inter", system-ui, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Apply the font broadly so every reused class picks it up. The code font
+   (--mono / Source Code Pro) is intentionally left as-is for commands. */
+body, button, input, select, textarea { font-family: var(--sans); }
+
+.hidden { display: none !important; }
+
+.lang-switch {
+  margin-left: 0.6rem;
+  color: var(--fg-mid);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.05rem 0.45rem;
+  text-decoration: none;
+}
+.lang-switch:hover { color: var(--fg); border-color: var(--accent); }
+
+/* Override the one Japanese string injected by styles.css via ::before
+   (the AI tutor empty-state header). All other chat CSS is reused as-is. */
+.chat-empty::before { content: "✦ Tutor hints"; }

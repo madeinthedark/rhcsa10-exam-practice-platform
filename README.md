@@ -28,7 +28,7 @@ python3 -m http.server 8765
 # open http://localhost:8765/
 ```
 
-Browse tasks under **分野別ドリル** (Drill), open one and toggle **Learn / Solve**, or run the timed **模擬試験** (Exam) and self-assess.
+Browse tasks under **Drill**, open one and toggle **Learn / Solve**, or run the timed **Exams** and self-assess.
 
 ## Optional: VM auto-grading
 
@@ -39,14 +39,14 @@ With a real RHEL 10 practice VM you can grade tasks over SSH from the browser. T
 ```
 app/
   index.html              SPA entry
-  styles.css
+  app.js                  the app: routing, screens, exam session, timer
+  styles.css  en.css      base + English styles
+  chat_en.js              optional AI tutor (talks to the local bridge)
   js/
-    main.js               routing, exam session, timer
     bridge.js             vmbridge HTTP client
     grader.js             score aggregation
-    chat.js               optional AI tutor (talks to the local bridge)
-    ui/{screens,progress}.js
-    data/                 ORIGINAL sample data for this demo
+    ui/progress.js        localStorage progress store
+    data/                 ORIGINAL sample data (questions, exams, guides + EN overlays)
   tools/
     vmbridge.py           hardened localhost SSH bridge
     grader_audit.py       false-positive auditor

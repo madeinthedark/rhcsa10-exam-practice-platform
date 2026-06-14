@@ -5,7 +5,7 @@ const GUIDES = [
  {
   slug: "00-overview",
   title: "Overview (demo)",
-  html: "<h1>RHCSA 10 exam practice — demo build</h1><p>This is a public, code-only demo of a personal study tool for the RHEL 10 RHCSA (EX200) exam. The original question bank and study notes are excluded for copyright; what you see here runs on a small set of <strong>original sample tasks</strong> so the engine can be explored end to end.</p><p>Pick a domain under <em>分野別ドリル</em> (Drill), open a task, and switch between <strong>Learn</strong> and <strong>Solve</strong> modes. In <em>模擬試験</em> (Exam) you can run the timed sample exam and self-assess. The optional VM auto-grader (SSH into real practice VMs) needs local setup — see the project README.</p>"
+  html: "<h1>RHCSA 10 exam practice — demo build</h1><p>This is a public, code-only demo of a personal study tool for the RHEL 10 RHCSA (EX200) exam. The original question bank and study notes are excluded for copyright; what you see here runs on a small set of <strong>original sample tasks</strong> so the engine can be explored end to end.</p><p>Pick a domain under <em>Drill</em>, open a task, and switch between <strong>Learn</strong> and <strong>Solve</strong> modes. In <em>Exams</em> you can run the timed sample exam and self-assess. The optional VM auto-grader (SSH into real practice VMs) needs local setup — see the project README.</p>"
  },
  {
   slug: "01-essential-tools",
